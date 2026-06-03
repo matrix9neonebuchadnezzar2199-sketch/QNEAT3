@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>2026-05-30 開発日記 - QNEAT3</title>
+<style>
+/* ===== GitHub Dark v2 — 開発日記テンプレート ===== */
+:root {
+  --gh-canvas: #0d1117;
+  --gh-canvas-subtle: #161b22;
+  --gh-canvas-inset: #010409;
+  --gh-border: #30363d;
+  --gh-border-muted: #21262d;
+  --gh-fg: #e6edf3;
+  --gh-fg-muted: #8b949e;
+  --gh-fg-subtle: #6e7681;
+  --gh-accent: #58a6ff;
+  --gh-accent-emphasis: #1f6feb;
+  --gh-success: #3fb950;
+  --gh-attention: #d29922;
+  --gh-danger: #f85149;
+  --gh-done-bg: rgba(35, 134, 54, 0.15);
+  --gh-code-bg: #161b22;
+}
+
+* { box-sizing: border-box; }
+html { scroll-behavior: smooth; }
+
+body.diary.diary-v2 {
+  margin: 0;
+  padding: 32px 16px 64px;
+  max-width: 1012px;
+  margin-inline: auto;
+  background: var(--gh-canvas);
+  color: var(--gh-fg);
+  font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* Header */
+.gh-repo-header {
+  padding-bottom: 24px;
+  margin-bottom: 24px;
+  border-bottom: 1px solid var(--gh-border);
+}
+.gh-repo-header .eyebrow {
+  font-size: 12px;
+  color: var(--gh-fg-muted);
+  margin: 0 0 8px;
+}
+.gh-repo-header h1 {
+  margin: 0 0 8px;
+  font-size: 24px;
+  font-weight: 600;
+  color: var(--gh-accent);
+}
+.gh-repo-header .subtitle {
+  margin: 0 0 16px;
+  color: var(--gh-fg-muted);
+  font-size: 14px;
+}
+.gh-repo-header .header-labels {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+/* Labels */
+.gh-label {
+  display: inline-block;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 500;
+  line-height: 22px;
+  border-radius: 2em;
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+.gh-label-scope { background: rgba(136, 87, 255, 0.15); color: #a371f7; border-color: rgba(163, 113, 247, 0.4); }
+.gh-label-type { background: rgba(110, 118, 129, 0.2); color: var(--gh-fg-muted); border-color: var(--gh-border); }
+.gh-label-ok { background: rgba(63, 185, 80, 0.15); color: var(--gh-success); border-color: rgba(63, 185, 80, 0.4); }
+.gh-label-warn { background: rgba(210, 153, 34, 0.15); color: var(--gh-attention); border-color: rgba(210, 153, 34, 0.4); }
+.gh-label-err { background: rgba(248, 81, 73, 0.15); color: var(--gh-danger); border-color: rgba(248, 81, 73, 0.4); }
+
+/* TOC */
+.gh-toc {
+  margin-bottom: 24px;
+  border: 1px solid var(--gh-border);
+  border-radius: 6px;
+  overflow: hidden;
+  background: var(--gh-canvas-subtle);
+}
+.gh-toc-title {
+  margin: 0;
+  padding: 12px 16px;
+  font-size: 14px;
+  font-weight: 600;
+  background: var(--gh-border-muted);
+  border-bottom: 1px solid var(--gh-border);
+  color: var(--gh-fg);
+}
+.gh-toc table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.gh-toc th {
+  text-align: left;
+  padding: 8px 16px;
+  color: var(--gh-fg-muted);
+  font-weight: 600;
+  font-size: 12px;
+  border-bottom: 1px solid var(--gh-border);
+  background: var(--gh-canvas-subtle);
+}
+.gh-toc td {
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--gh-border-muted);
+  vertical-align: middle;
+}
+.gh-toc tr:last-child td { border-bottom: none; }
+.gh-toc tr:hover td { background: rgba(88, 166, 255, 0.04); }
+.gh-toc td:first-child {
+  font-family: ui-monospace, "JetBrains Mono", Consolas, monospace;
+  color: var(--gh-fg-muted);
+  white-space: nowrap;
+}
+
+/* Entry */
+.gh-entry {
+  margin: 24px 0;
+  padding: 20px;
+  border: 1px solid var(--gh-border);
+  border-radius: 6px;
+  background: var(--gh-canvas-subtle);
+}
+.gh-entry h2 {
+  margin: 0 0 12px;
+  padding-bottom: 8px;
+  font-size: 20px;
+  font-weight: 600;
+  border-bottom: 1px solid var(--gh-border);
+  color: var(--gh-fg);
+}
+.gh-entry-meta {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 16px;
+  font-size: 12px;
+  color: var(--gh-fg-muted);
+}
+.gh-entry-meta .commit-hash {
+  font-family: ui-monospace, Consolas, monospace;
+  padding: 2px 6px;
+  background: var(--gh-code-bg);
+  border: 1px solid var(--gh-border);
+  border-radius: 4px;
+  color: var(--gh-accent);
+}
+.gh-entry-meta .pending { color: var(--gh-attention); font-style: italic; }
+
+.gh-entry h3 {
+  margin: 20px 0 10px;
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--gh-fg-muted);
+}
+.gh-entry h3:first-of-type { margin-top: 0; }
+.gh-entry p { margin: 8px 0; }
+.gh-entry p.lead { color: var(--gh-fg-muted); font-size: 15px; }
+
+/* Tables */
+.gh-table-wrap {
+  border: 1px solid var(--gh-border);
+  border-radius: 6px;
+  overflow: hidden;
+  margin: 12px 0;
+}
+.gh-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.gh-table th {
+  text-align: left;
+  padding: 8px 12px;
+  background: var(--gh-border-muted);
+  color: var(--gh-fg-muted);
+  font-weight: 600;
+  font-size: 12px;
+  border-bottom: 1px solid var(--gh-border);
+}
+.gh-table td {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--gh-border-muted);
+  vertical-align: top;
+}
+.gh-table tr:last-child td { border-bottom: none; }
+.gh-table tbody tr:hover td { background: rgba(88, 166, 255, 0.04); }
+
+/* Flow (horizontal) */
+.flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin: 12px 0;
+  padding: 16px;
+  background: var(--gh-canvas-inset);
+  border: 1px solid var(--gh-border);
+  border-radius: 6px;
+}
+.flow-box {
+  padding: 8px 14px;
+  background: var(--gh-canvas-subtle);
+  border: 1px solid var(--gh-border);
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--gh-fg);
+}
+.flow-box.accent { border-color: var(--gh-accent-emphasis); color: var(--gh-accent); }
+.flow-box.done { border-color: var(--gh-success); background: var(--gh-done-bg); color: var(--gh-success); }
+.flow-arrow { color: var(--gh-fg-subtle); font-size: 16px; user-select: none; }
+
+/* Pipeline (vertical, GitHub Actions style) */
+.pipeline { margin: 12px 0; }
+.pipeline-step {
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+.pipeline-marker {
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  margin-top: 4px;
+  flex-shrink: 0;
+  border: 2px solid var(--gh-border);
+  background: var(--gh-canvas);
+}
+.pipeline-step.done .pipeline-marker { background: var(--gh-success); border-color: var(--gh-success); }
+.pipeline-step.active .pipeline-marker { background: var(--gh-accent); border-color: var(--gh-accent); box-shadow: 0 0 0 3px rgba(88, 166, 255, 0.3); }
+.pipeline-step.pending .pipeline-marker { background: transparent; }
+.pipeline-step.failed .pipeline-marker { background: var(--gh-danger); border-color: var(--gh-danger); }
+.pipeline-body {
+  flex: 1;
+  padding-bottom: 16px;
+  border-left: 2px solid var(--gh-border);
+  margin-left: 5px;
+  padding-left: 20px;
+  margin-bottom: 0;
+}
+.pipeline-step:last-child .pipeline-body { border-left-color: transparent; padding-bottom: 0; }
+.pipeline-title { font-weight: 600; font-size: 14px; margin-bottom: 4px; }
+.pipeline-desc { font-size: 13px; color: var(--gh-fg-muted); margin: 0; }
+
+/* Diff list */
+.diff-list { list-style: none; padding: 0; margin: 12px 0; font-family: ui-monospace, Consolas, monospace; font-size: 12px; border: 1px solid var(--gh-border); border-radius: 6px; overflow: hidden; }
+.diff-list li { padding: 4px 12px; border-bottom: 1px solid var(--gh-border-muted); display: flex; gap: 8px; align-items: baseline; }
+.diff-list li:last-child { border-bottom: none; }
+.diff-mark { width: 16px; font-weight: 700; flex-shrink: 0; }
+.diff-add { background: rgba(63, 185, 80, 0.08); }
+.diff-add .diff-mark { color: var(--gh-success); }
+.diff-mod { background: rgba(210, 153, 34, 0.06); }
+.diff-mod .diff-mark { color: var(--gh-attention); }
+.diff-del { background: rgba(248, 81, 73, 0.08); }
+.diff-del .diff-mark { color: var(--gh-danger); }
+
+/* Callout */
+.gh-callout {
+  margin: 12px 0;
+  padding: 12px 16px;
+  border: 1px solid var(--gh-border);
+  border-left: 3px solid var(--gh-accent-emphasis);
+  border-radius: 0 6px 6px 0;
+  background: rgba(88, 166, 255, 0.06);
+  font-size: 13px;
+}
+.gh-callout.warn { border-left-color: var(--gh-attention); background: rgba(210, 153, 34, 0.06); }
+.gh-callout .callout-tag { font-size: 11px; font-weight: 600; color: var(--gh-accent); margin-right: 8px; }
+
+/* Code */
+code {
+  font-family: ui-monospace, Consolas, monospace;
+  font-size: 12px;
+  padding: 2px 6px;
+  background: var(--gh-code-bg);
+  border: 1px solid var(--gh-border);
+  border-radius: 4px;
+  color: var(--gh-fg);
+}
+a { color: var(--gh-accent); text-decoration: none; }
+a:hover { text-decoration: underline; }
+strong { font-weight: 600; color: var(--gh-fg); }
+
+footer.gh-footer {
+  margin-top: 40px;
+  padding-top: 16px;
+  border-top: 1px solid var(--gh-border);
+  font-size: 12px;
+  color: var(--gh-fg-subtle);
+  text-align: center;
+}
+</style>
+</head>
+<body class="diary diary-v2">
+
+<header class="gh-repo-header">
+  <p class="eyebrow">Development Log / 2026-05-30</p>
+  <h1>QNEAT3</h1>
+  <p class="subtitle">link_len エラー対処完了・1.0.17 ZIP</p>
+  <div class="header-labels">
+    <span class="gh-label gh-label-type">dev</span>
+    <span class="gh-label gh-label-scope">QNEAT3</span>
+  </div>
+</header>
+
+<section class="gh-toc">
+  <h2 class="gh-toc-title">Timeline</h2>
+  <table>
+    <thead>
+      <tr><th>時刻</th><th>概要</th><th>種別</th><th>Status</th><th>詳細</th></tr>
+    </thead>
+    <tbody>
+            <tr>
+        <td>08:45</td>
+        <td>デバッグ計装の完全撤去と 1.0.16 パック</td>
+        <td><span class="gh-label gh-label-type">dev</span></td>
+        <td><span class="gh-label gh-label-ok">ok</span></td>
+        <td><a href="#entry-0845">詳細</a></td>
+      </tr>
+      <tr>
+        <td>09:30</td>
+        <td>ERR 統合・1.0.17 パック（エラー対処完了）</td>
+        <td><span class="gh-label gh-label-type">dev</span></td>
+        <td><span class="gh-label gh-label-ok">ok</span></td>
+        <td><a href="#entry-0930">詳細</a></td>
+      </tr>
+
+    </tbody>
+  </table>
+</section>
+
+<main>
+    <section class="gh-entry entry" id="entry-0845">
+    <h2>デバッグ計装の完全撤去（1.0.16）</h2>
+    <div class="gh-entry-meta">
+      <span class="gh-label gh-label-type">dev</span>
+      <span class="gh-label gh-label-scope">tool</span>
+      <time datetime="2026-05-30T08:45">08:45</time>
+      <span class="commit-hash pending">pending</span>
+    </div>
+    <h3>概要</h3>
+    <p class="lead">Cursor デバッグ用の AgentLog・Diagnostics・検証スクリプトを削除。距離モード修正は維持。</p>
+  </section>
+
+  <section class="gh-entry entry" id="entry-0930">
+    <h2>link_len エラー対処完了（1.0.17）</h2>
+    <div class="gh-entry-meta">
+      <span class="gh-label gh-label-type">dev</span>
+      <span class="gh-label gh-label-scope">tool</span>
+      <time datetime="2026-05-30T09:30">09:30</time>
+      <span class="commit-hash pending">pending</span>
+    </div>
+    <h3>概要</h3>
+    <p class="lead"><code>Qneat3NetworkErrors</code> の文言を <code>ERR.*</code> に集約。<code>IsoAreaAsQneatInterpolationFromPoint</code> を Provider 登録。距離最適化＋速度 0・<code>self.AnalysisCrs</code> 修正を維持。<code>dist/QNEAT3-neo-1.0.17.zip</code> を生成。</p>
+    <h3>変更ファイル</h3>
+    <ul class="diff-list">
+      <li class="diff-mod"><span class="diff-mark">M</span> Qneat3Strings.py, Qneat3NetworkErrors.py</li>
+      <li class="diff-mod"><span class="diff-mark">M</span> Qneat3Provider.py, algs/__init__.py</li>
+      <li class="diff-add"><span class="diff-mark">+</span> scripts/validate_network_errors.py</li>
+      <li class="diff-add"><span class="diff-mark">+</span> dist/QNEAT3-neo-1.0.17.zip</li>
+    </ul>
+  </section>
+
+</main>
+
+<footer class="gh-footer">
+  <p>Cursor Dev Diary · style v2 (GitHub) · 2026-05-30</p>
+</footer>
+</body>
+</html>

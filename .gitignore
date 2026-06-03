@@ -1,0 +1,10 @@
+.idea/
+.settings/
+.project
+.pydevproject
+__pycache__/
+*.pyc
+*.pyo
+dist/*.zip
+debug-*.log
+NEO_load_error.txt

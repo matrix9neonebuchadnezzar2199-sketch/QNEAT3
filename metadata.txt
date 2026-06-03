@@ -1,0 +1,19 @@
+# QGIS plugin metadata (INI). 空行の key= や tags の ", " はパースエラーになる。
+[general]
+name=QNEAT3 NEO
+qgisMinimumVersion=3.0
+qgisMaximumVersion=3.99
+description=QNEAT3 network analysis (NEO fork, Japanese UI, link_len distance cost).
+about=QNEAT3（QGIS Network Analysis Toolbox 3）NEO 版。最短経路・OD 行列・等時圏。距離最適化は link_len 必須。UI・ログは日本語。一部等時圏は matplotlib が必要。
+version=1.0.19
+author=Clemens Raffler (NEO fork)
+email=clemens.raffler@gmail.com
+tags=network,analysis,odmatrix,isochrone,shortestpath,japanese,neo
+tracker=https://github.com/matrix9neonebuchadnezzar2199-sketch/QNEAT3/issues
+icon=icon_qneat3.svg
+experimental=False
+deprecated=False
+hasProcessingProvider=yes
+changelog=1.0.19 NEO: time mode uses link_len/speed on edges; explicit cost formula logs. Install from ZIP only.
+homepage=https://github.com/matrix9neonebuchadnezzar2199-sketch/QNEAT3
+repository=https://github.com/matrix9neonebuchadnezzar2199-sketch/QNEAT3

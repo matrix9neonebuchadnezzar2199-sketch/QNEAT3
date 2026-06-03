@@ -1,0 +1,12 @@
+QNEAT3 NEO (not official QNEAT3 from plugins.qgis.org)
+metadata_version=1.0.19
+build_id=20260601-link-len-time
+
+If Processing shows English titles like "OD Matrix from Layers as Lines",
+this folder is NOT the NEO build. Reinstall from dist/QNEAT3-neo-1.0.19.zip per README.html#plugin-broken.
+
+Expected tool title example:
+  [NEO] OD 行列（レイヤ間・ライン m:n）
+
+Expected provider name:
+  QNEAT3 (1.0.19, 20260601-link-len-time)

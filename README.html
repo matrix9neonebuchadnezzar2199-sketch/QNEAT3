@@ -1,0 +1,559 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>QNEAT3 NEO — ネットワーク解析プラグイン</title>
+<style>
+:root {
+  --bg: #0d1117;
+  --bg-subtle: #161b22;
+  --border: #30363d;
+  --text: #e6edf3;
+  --muted: #8b949e;
+  --accent: #58a6ff;
+  --ok: #3fb950;
+  --warn: #d29922;
+  --err: #f85149;
+}
+* { box-sizing: border-box; }
+body {
+  margin: 0;
+  padding: 24px 16px 64px;
+  max-width: 920px;
+  margin-inline: auto;
+  background: var(--bg);
+  color: var(--text);
+  font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic UI", Meiryo, sans-serif;
+  font-size: 15px;
+  line-height: 1.65;
+}
+a { color: var(--accent); }
+h1 { font-size: 1.75rem; color: var(--accent); margin: 0 0 0.5rem; }
+h2 { font-size: 1.25rem; margin: 2rem 0 0.75rem; padding-bottom: 0.35rem; border-bottom: 1px solid var(--border); }
+h3 { font-size: 1.05rem; margin: 1.25rem 0 0.5rem; color: var(--muted); }
+.lead { color: var(--muted); margin-bottom: 1.5rem; }
+.pill {
+  display: inline-block;
+  padding: 0.15rem 0.65rem;
+  font-size: 0.8rem;
+  border-radius: 2em;
+  border: 1px solid var(--border);
+  margin-right: 0.35rem;
+  margin-bottom: 0.35rem;
+}
+.pill-ok { border-color: var(--ok); color: var(--ok); }
+.pill-warn { border-color: var(--warn); color: var(--warn); }
+.flow {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 1rem 0;
+  padding: 1rem;
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+}
+.flow span.step {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  padding: 0.4rem 0.75rem;
+  border-radius: 6px;
+  font-size: 0.9rem;
+}
+.flow .arrow { color: var(--muted); }
+.gh-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 1rem 0;
+  font-size: 0.92rem;
+}
+.gh-table th, .gh-table td {
+  border: 1px solid var(--border);
+  padding: 0.55rem 0.75rem;
+  text-align: left;
+}
+.gh-table th { background: var(--bg-subtle); color: var(--muted); }
+.gh-table tr:nth-child(even) td { background: rgba(255,255,255,0.02); }
+.callout {
+  border-left: 4px solid var(--accent);
+  padding: 0.75rem 1rem;
+  margin: 1rem 0;
+  background: var(--bg-subtle);
+  border-radius: 0 6px 6px 0;
+}
+.callout-warn { border-left-color: var(--warn); }
+.callout-err { border-left-color: var(--err); }
+.callout-ok { border-left-color: var(--ok); }
+ol.steps { counter-reset: step; list-style: none; padding: 0; }
+ol.steps > li {
+  counter-increment: step;
+  margin: 1rem 0;
+  padding-left: 2.75rem;
+  position: relative;
+}
+ol.steps > li::before {
+  content: counter(step);
+  position: absolute;
+  left: 0;
+  width: 2rem;
+  height: 2rem;
+  line-height: 2rem;
+  text-align: center;
+  background: var(--accent);
+  color: #0d1117;
+  font-weight: 700;
+  border-radius: 50%;
+  font-size: 0.9rem;
+}
+code, kbd {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  padding: 0.1rem 0.35rem;
+  border-radius: 4px;
+  font-size: 0.88em;
+}
+pre {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  padding: 1rem;
+  overflow-x: auto;
+  border-radius: 6px;
+  font-size: 0.85rem;
+}
+nav.toc {
+  background: var(--bg-subtle);
+  border: 1px solid var(--border);
+  padding: 1rem 1.25rem;
+  border-radius: 8px;
+  margin: 1.5rem 0;
+}
+nav.toc ul { margin: 0.5rem 0 0; padding-left: 1.25rem; }
+nav.toc li { margin: 0.35rem 0; }
+</style>
+</head>
+<body>
+
+<header>
+  <p class="eyebrow" style="color:var(--muted);font-size:0.85rem;margin:0;">QGIS 3 · Processing プラグイン</p>
+  <h1>QNEAT3 NEO</h1>
+  <p class="lead">
+    最短経路・OD 行列・等時圏（到達圏）解析。<strong>日本語 UI</strong>、距離コストは <code>link_len</code> フィールド対応（NEO 版）。
+    upstream QNEAT3 1.0.8 系フォーク。
+  </p>
+  <span class="pill pill-ok">GPL-2.0</span>
+  <span class="pill">QGIS 3.0 – 3.99</span>
+  <span class="pill pill-warn">投影 CRS 推奨</span>
+</header>
+
+<nav class="toc">
+  <strong>目次</strong>
+  <ul>
+    <li><a href="#install">導入方法（初心者向け）</a></li>
+    <li><a href="#prepare">実行前のデータ準備</a></li>
+    <li><a href="#usage">基本的な使い方</a></li>
+    <li><a href="#verify-steps">検証手順（STEPS）</a></li>
+    <li><a href="#distance-time">最短距離と最短時間の違い</a></li>
+    <li><a href="docs/COST_FORMULAS.md">コスト計算式（docs/COST_FORMULAS.md）</a></li>
+    <li><a href="#bugs">既知の挙動・バグ調査結果</a></li>
+    <li><a href="#algorithms">アルゴリズム一覧</a></li>
+    <li><a href="#plugin-broken">「プラグインが壊れています」</a></li>
+    <li><a href="#trouble">トラブルシューティング</a></li>
+  </ul>
+</nav>
+
+<h2 id="install">導入方法（初心者向け）</h2>
+
+<div class="callout callout-warn">
+  <strong>重要:</strong> Python の import 名は <code>QNEAT3</code> です。コピー先フォルダ名も <strong><code>QNEAT3</code></strong> にしてください（<code>QNEAT3_NEO</code> のままだと読み込めません）。
+</div>
+
+<div class="flow">
+  <span class="step">ZIP を入手</span>
+  <span class="arrow">→</span>
+  <span class="step">フォルダ名を QNEAT3 に</span>
+  <span class="arrow">→</span>
+  <span class="step">plugins に配置</span>
+  <span class="arrow">→</span>
+  <span class="step">QGIS で有効化</span>
+</div>
+
+<ol class="steps">
+  <li>
+    <strong>QGIS 3 をインストール</strong><br>
+    公式サイト <a href="https://qgis.org/">qgis.org</a> から「長期リリース版（LTR）」を推奨。インストール後、一度 QGIS を起動して終了しておく。
+  </li>
+  <li>
+    <strong>プラグインフォルダを開く</strong><br>
+    QGIS メニュー: <kbd>設定</kbd> → <kbd>ユーザープロファイル</kbd> → <kbd>プロファイルフォルダを開く</kbd><br>
+    開いたエクスプローラーで <code>python\plugins</code> に移動する。
+    <pre>例（Windows）:
+%APPDATA%\QGIS\QGIS3\profiles\default\python\plugins\</pre>
+  </li>
+  <li>
+    <strong>プラグインをコピー</strong><br>
+  リポジトリの <code>QNEAT3_NEO</code> フォルダの<strong>中身すべて</strong>を、上記 <code>plugins\QNEAT3</code> として配置する（新規フォルダ作成）。
+    <pre>plugins\
+  └── QNEAT3\          ← この名前が必須
+        ├── __init__.py
+        ├── Qneat3Plugin.py
+        ├── algs\
+        ├── icons\
+        └── …</pre>
+  </li>
+  <li>
+    <strong>QGIS を再起動</strong><br>
+    完全に終了してから起動し直す。
+  </li>
+  <li>
+    <strong>プラグインを有効化</strong><br>
+    メニュー <kbd>プラグイン</kbd> → <kbd>プラグインの管理とインストール</kbd> → <kbd>インストール済み</kbd> で「QNEAT3」を検索 → チェックを入れる。
+  </li>
+  <li>
+    <strong>動作確認</strong><br>
+    メニュー <kbd>プロセス</kbd> → <kbd>プロセスツールボックス</kbd> を開き、検索欄に <code>QNEAT3</code> と入力。グループ「QNEAT3 - QGIS ネットワーク解析ツールボックス」が表示されれば成功。
+  </li>
+</ol>
+
+<h3>等時圏ポリゴン・等値線を使う場合（任意）</h3>
+<p>一部アルゴリズムは <strong>matplotlib</strong> が必要です。OSGeo4W Shell で:</p>
+<pre>python-qgis -m pip install matplotlib</pre>
+<p>インストール後、再度 QGIS を再起動してください。</p>
+
+<h2 id="prepare">実行前のデータ準備</h2>
+
+<table class="gh-table">
+  <thead>
+    <tr><th>項目</th><th>内容</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>ネットワークレイヤ</td>
+      <td>道路・管路などの<strong>線レイヤ</strong>。トポロジがつながっていること。</td>
+    </tr>
+    <tr>
+      <td><code>link_len</code></td>
+      <td>数値フィールド。<strong>距離最適化時は全リンク必須</strong>（正の数、NULL 不可）。形状長と異なる「論理距離」を入れる。</td>
+    </tr>
+    <tr>
+      <td>速度フィールド</td>
+      <td><strong>時間最適化時</strong>に使用（km/h）。未設定時はデフォルト速度。</td>
+    </tr>
+    <tr>
+      <td>座標系</td>
+      <td>メートル単位の<strong>投影 CRS</strong>（例: 平面直角座標）。WGS84 地理座標のまま距離解析は非推奨。</td>
+    </tr>
+  </tbody>
+</table>
+
+<h2 id="usage">基本的な使い方</h2>
+
+<ol class="steps">
+  <li>線ネットワークレイヤを読み込む（<code>link_len</code> を付与済みであること）。</li>
+  <li>プロセスツールボックスで例: <strong>最短経路（点間）</strong> を開く。</li>
+  <li><strong>最適化基準</strong>で「最短経路（距離）」または「最速経路（時間）」を選択。</li>
+  <li>高度パラメータで <strong>リンク長フィールド</strong> = <code>link_len</code>（距離モード時）。</li>
+  <li>実行。ログに <code>コストモード: …</code> が出るので戦略を確認。</li>
+</ol>
+
+<div class="callout callout-ok">
+  <strong>更新確認</strong>は下記 <a href="#verify-steps">検証手順（STEPS）</a> を参照してください。
+</div>
+
+<h2 id="verify-steps">検証手順（STEPS）</h2>
+
+<p>
+  プラグイン更新の反映確認、<code>link_len</code> による距離コストの動作確認、
+  「実測距離のままに見える」問題の切り分け用です。作業前に QGIS を<strong>完全終了</strong>し、
+  <code>plugins\QNEAT3</code> を最新版に差し替えてから再起動してください。
+</p>
+
+<h3>A. プラグイン更新の反映確認</h3>
+<ol class="steps">
+  <li>
+    QGIS を終了し、<code>…\profiles\…\python\plugins\QNEAT3</code> を最新の NEO 版に上書きする。
+  </li>
+  <li>
+    QGIS を起動し、<kbd>処理</kbd> → <kbd>ツールボックス</kbd> を開く。
+  </li>
+  <li>
+    プロバイダ一覧で名前が
+    <code>QNEAT3 (1.0.16, 20260530-cleanup)</code>
+    のように <strong>バージョンとビルド ID</strong> 付きになっていることを確認する。
+    <br>古い表示の場合は、別フォルダのプラグインが読み込まれている可能性があります。
+  </li>
+  <li>
+    任意のアルゴリズム（例: <strong>最短経路（点間）</strong>）を実行し、ログに
+    <code>コストモード: 最短距離（link_len 属性）</code> または時間モードの表示が出ることを確認する。
+  </li>
+</ol>
+
+<h3>B. link_len 距離コストの動作確認</h3>
+<ol class="steps">
+  <li>
+    線ネットワークに <code>link_len</code> フィールド（全リンク正の数値）を用意する。
+    テスト用に数リンクだけ形状長と<strong>意図的に異なる値</strong>を入れると判別しやすいです。
+  </li>
+  <li>
+    <strong>最短経路（点間）</strong> を開き、<strong>最適化基準</strong>を
+    「最短経路（距離最適化）」に設定する。
+  </li>
+  <li>
+    高度パラメータを開き、<strong>リンク長フィールド</strong> = <code>link_len</code> を指定する。
+  </li>
+  <li>
+    実行し、ログで次を確認する。
+    <table class="gh-table">
+      <thead>
+        <tr><th>ログ項目</th><th>期待</th></tr>
+      </thead>
+      <tbody>
+        <tr>
+          <td><code>コストモード</code></td>
+          <td><code>最短距離（link_len 属性）</code></td>
+        </tr>
+        <tr>
+          <td><code>距離最適化: 速度フィールド…</code></td>
+          <td>距離モードで速度が無視される旨（デフォルト速度 0 でも可）</td>
+        </tr>
+      </tbody>
+    </table>
+  </li>
+  <li>
+    出力属性を分けて確認する。
+    <ul>
+      <li><code>cost_on_graph</code> … グラフ上（<code>link_len</code> の合計）</li>
+      <li><code>start_entry_cost</code> / <code>end_exit_cost</code> … ネットワーク外の<strong>実測接続距離</strong>（仕様）</li>
+      <li><code>total_cost</code> … 上記の合計（entry/exit が大きいと実測寄りに見える）</li>
+    </ul>
+    ログに <code>[QNEAT3] コスト値: entry=… graph=… exit=… total=…</code> も出ます。
+  </li>
+</ol>
+
+<h3>C. 時間最適化との切り替え確認</h3>
+<ol class="steps">
+  <li>
+    同じダイアログで <strong>最適化基準</strong>だけ「最速経路（時間最適化）」に変更する。
+    <br><em>パラメータ一覧の項目数・ラベルは変わりません（Processing の仕様）。</em>
+  </li>
+  <li>
+    再実行し、ログで <code>コストモード: 最速（link_len ÷ 速度。形状長は未使用）</code> になることを確認する。
+  </li>
+  <li>
+    <code>[QNEAT3] UI 注記</code> が出ていれば、距離時は link_len・時間時は速度フィールドが有効である旨の説明です。
+  </li>
+</ol>
+
+<div class="callout callout-warn">
+  <strong><code>link_len</code> が形状長と同じ値の場合</strong><br>
+  データ上 <code>link_len</code> が形状長と同じ値のため、距離最適化でも結果が変わらないように見えます。フィールド値を見直してください。
+</div>
+
+<div class="callout callout-warn">
+  <strong>最適化基準を変えてもパラメータ一覧は変わりません（仕様）</strong><br>
+  実際のモードはログの <code>コストモード</code> と <a href="#verify-steps">検証手順 B/C</a> で確認してください。
+</div>
+
+<h2 id="distance-time">最短距離と最短時間が「同じ」ように見える場合</h2>
+
+<div class="callout callout-ok">
+  <strong>結論（コード調査）:</strong> 距離と時間で<strong>同じ戦略が強制されるバグは見つかっていません</strong>。
+  グラフ構築時に <code>Qneat3LinkLengthStrategy</code>（link_len）と <code>Qneat3LinkLengthTimeStrategy</code>（link_len÷速度）を切り替えています。式一覧は <a href="docs/COST_FORMULAS.md">COST_FORMULAS.md</a>。
+</div>
+
+<table class="gh-table">
+  <thead>
+    <tr><th>モード</th><th>エッジコスト</th><th>entry / exit</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>最短経路（距離）</td>
+      <td><code>link_len</code> の値</td>
+      <td>点↔頂点の直線距離（楕円体 or 平面）</td>
+    </tr>
+    <tr>
+      <td>最速経路（時間）</td>
+      <td><code>link_len</code> ÷ 速度（km/h→m/s 換算）</td>
+      <td>実測直線距離 ÷ 速度</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>同じ「経路形状」になるのは正常なことが多い</h3>
+<p>全リンクの速度が一定のとき、コストは「距離 × 定数」となり、<strong>どの経路が最短かの順序は距離モードと一致</strong>します。表示される <code>total_cost</code> の数値は通常異なります。</p>
+
+<h3>コストまで同じに見えるときのチェックリスト</h3>
+<ul>
+  <li>本当に「最適化基準」を切り替えたか（ログの <code>コストモード</code> を確認）</li>
+  <li><code>link_len</code> を「形状長 ÷ 速度」で事前計算していないか</li>
+  <li>速度が一定で、かつ entry コストが支配的でないか</li>
+  <li>比較しているのが経路ジオメトリだけではないか（属性の <code>cost_on_graph</code> を比較）</li>
+</ul>
+
+<h2 id="bugs">既知の挙動・バグ調査結果（NEO 1.0.10）</h2>
+
+<table class="gh-table">
+  <thead>
+    <tr><th>重要度</th><th>内容</th><th>状態</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>—</td>
+      <td>距離／時間で同一戦略になるバグ</td>
+      <td><strong>再現せず</strong>（設計上は別 Strategy）</td>
+    </tr>
+    <tr>
+      <td>修正済</td>
+      <td>アイコンパスが <code>plugins/QNEAT3/icons</code> 固定で、フォルダ名 <code>QNEAT3_NEO</code> だとアイコン欠落</td>
+      <td><code>Qneat3Paths.py</code> で解決</td>
+    </tr>
+    <tr>
+      <td>修正済</td>
+      <td>等時点クラウドのコスト更新ロジックが冗長（誤解を招くコメント）</td>
+      <td>整理済</td>
+    </tr>
+    <tr>
+      <td>修正済</td>
+      <td>ポイントレイヤが MultiPoint のとき例外</td>
+      <td><code>getListOfPoints</code> 対応</td>
+    </tr>
+    <tr>
+      <td>注意</td>
+      <td>地理座標系（度単位）では距離・時間コストが不正確になりうる</td>
+      <td>投影 CRS を使用（upstream 既知問題）</td>
+    </tr>
+    <tr>
+      <td>注意</td>
+      <td>等時圏ラスタ補間のオフネットワーク部分は形状距離を使用（link_len 非適用）</td>
+      <td>仕様</td>
+    </tr>
+    <tr>
+      <td>低</td>
+      <td><code>calcDijkstra(..., 0)</code> の criterion は「登録 Strategy の index」で、常に 0（1 戦略のみ登録のため正しい）</td>
+      <td>問題なし</td>
+    </tr>
+  </tbody>
+</table>
+
+<p>リンク長の検証エラー仕様は <code>Qneat3NetworkErrors.py</code> を参照（NULL・非数値・0 以下は即エラー）。</p>
+
+<h2 id="algorithms">アルゴリズム一覧</h2>
+
+<table class="gh-table">
+  <thead>
+    <tr><th>グループ</th><th>例</th></tr>
+  </thead>
+  <tbody>
+    <tr><td>経路</td><td>最短経路（点間）</td></tr>
+    <tr><td>距離行列</td><td>OD 行列（表 / ライン / CSV）</td></tr>
+    <tr><td>等時圏・到達圏</td><td>点クラウド、TIN 補間、等値線、ポリゴン</td></tr>
+  </tbody>
+</table>
+
+<h2 id="plugin-broken">「プラグインが壊れています」／再インストールで元に戻る</h2>
+
+<div class="callout callout-err">
+  <strong>再インストールボタンは使わないでください。</strong><br>
+  プラグインマネージャから入れた QNEAT3 は、再インストール・アップグレード時に
+  <strong>plugins.qgis.org の公式 1.0.8</strong> を再取得し、NEO 版を上書きします。
+  これが「更新したのに元に戻る」「壊れたまま」の典型原因です。
+</div>
+
+<h3>原因の整理</h3>
+<table class="gh-table">
+  <thead>
+    <tr><th>症状</th><th>よくある原因</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>属性情報の読み取りエラー: general</td>
+      <td><code>metadata.txt</code> 不正（空の <code>homepage=</code>、<code>version=1.0.11-neo-…</code>、<code>tags</code> の「, 」など）。NEO 1.0.11 で修正済み</td>
+    </tr>
+    <tr>
+      <td>インストール版が「?」</td>
+      <td>上記の metadata 読み取り失敗。ZIP を再取得して入れ直す</td>
+    </tr>
+    <tr>
+      <td>プラグインが壊れています（実行時）</td>
+      <td>読み込み例外（<code>algs/__init__.py</code> 欠落、混在、<code>NEO_load_error.txt</code> を確認）</td>
+    </tr>
+    <tr>
+      <td>再インストールで公式版に戻る</td>
+      <td>マネージャが公式 ZIP を取得（NEO の <code>metadata.txt</code> で <code>repository=</code> を空にしても、過去に公式登録済みだと残ることがある）</td>
+    </tr>
+    <tr>
+      <td>ZIP 更新が反映されない</td>
+      <td>QGIS キャッシュ（<code>%LocalAppData%\QGIS\QGIS3\cache</code>）や QGIS 未終了によるファイルロック</td>
+    </tr>
+  </tbody>
+</table>
+
+<h3>推奨: クリーン導入（NEO 版）</h3>
+<ol class="steps">
+  <li>
+    <strong>QGIS を完全終了</strong>（タスクマネージャで <code>qgis-bin.exe</code> が無いことを確認）。
+  </li>
+  <li>
+    プラグイン → <strong>プラグインの管理とインストール</strong> → インストール済みで
+    <strong>QNEAT3</strong> を<strong>アンインストール</strong>（公式登録を外す）。
+  </li>
+  <li>
+  エクスプローラで <code>…\python\plugins\QNEAT3</code> フォルダを<strong>丸ごと削除</strong>
+    （残っていると混在して壊れます）。
+  </li>
+  <li>
+    NEO 版を配置する（どちらか一方）。
+    <ul>
+      <li><strong>手動:</strong> リポジトリの <code>QNEAT3</code> フォルダを <code>plugins\QNEAT3</code> にコピー</li>
+      <li><strong>ZIP:</strong> <code>scripts\pack_plugin_zip.ps1</code> で <code>dist\QNEAT3-neo-….zip</code> を作成し、
+        プラグイン → <strong>ZIP からインストール</strong>（公式の再インストールではない）</li>
+    </ul>
+  </li>
+  <li>
+    QGIS 起動 → プラグイン一覧で <strong>QNEAT3 NEO</strong> を有効化。
+    壊れている場合は <code>plugins\QNEAT3\NEO_load_error.txt</code> の内容を確認。
+  </li>
+</ol>
+
+<div class="callout callout-warn">
+  <strong>NEO 版の目印:</strong> 一覧の表示名が <code>QNEAT3 NEO</code>、
+  処理プロバイダが <code>QNEAT3 (1.0.16, 20260530-cleanup)</code> のようにバージョン付きであること。
+</div>
+
+<h2 id="trouble">トラブルシューティング</h2>
+
+<table class="gh-table">
+  <thead>
+    <tr><th>症状</th><th>対処</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td>プラグインが一覧に出ない</td>
+      <td>フォルダ名が <code>QNEAT3</code> か、<code>__init__.py</code> と <code>algs\__init__.py</code> があるか確認。QGIS 再起動。</td>
+    </tr>
+    <tr>
+      <td>再インストールを押してしまった</td>
+      <td>上記 <a href="#plugin-broken">クリーン導入</a> をやり直す。再インストールは使わない。</td>
+    </tr>
+    <tr>
+      <td>リンク長の検証エラー</td>
+      <td>全線に <code>link_len</code> の正の数値があるか。フィールド名の綴りを確認。</td>
+    </tr>
+    <tr>
+      <td>経路が見つからない</td>
+      <td>ネットワークの隙間・方向制限・トポロジ許容差を確認。</td>
+    </tr>
+    <tr>
+      <td>等時圏ポリゴンが空</td>
+      <td>matplotlib 未導入の可能性。本 README の matplotlib 節を参照。</td>
+    </tr>
+  </tbody>
+</table>
+
+<footer style="margin-top:3rem;padding-top:1rem;border-top:1px solid var(--border);color:var(--muted);font-size:0.85rem;">
+  QNEAT3 NEO · ベース: Clemens Raffler (QNEAT3) · ドキュメント HTML 版
+</footer>
+
+</body>
+</html>
