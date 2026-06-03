@@ -6,7 +6,7 @@ import os
 from QNEAT3.Qneat3Paths import plugin_root
 
 # 機能変更のたびに更新（プロバイダ名の区別に使う）
-BUILD_ID = "20260603-ja-ui"
+BUILD_ID = "20260530-log-ja"
 NEO_LINK_LEN_FEATURE = True
 
 
@@ -25,8 +25,11 @@ def read_metadata_version():
 
 
 def push_build_banner(feedback):
-    """実行ログ先頭にバージョン行のみ出す（導入確認用。デバッグ NDJSON ではない）。"""
+    """実行ログ先頭にバージョンと案内を出す。"""
+    from QNEAT3.Qneat3Strings import log_run_intro
+
     version = read_metadata_version()
     feedback.pushInfo(
         "[QNEAT3 NEO] バージョン: {} | ビルドID: {}".format(version, BUILD_ID)
     )
+    log_run_intro(feedback)

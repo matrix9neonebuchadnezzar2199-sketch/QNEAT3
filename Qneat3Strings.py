@@ -170,6 +170,52 @@ class LOG:
         "[QNEAT3] コスト値: entry={entry:.4f} graph={graph:.4f} exit={exit:.4f} total={total:.4f}"
     )
 
+    # 見やすいログ（セクション表示）
+    SEPARATOR = "────────────────────────────────────────"
+    RUN_INTRO = (
+        "[QNEAT3 NEO] 以下の設定で計算します。"
+        "国土地理院+手描き+架空の統合ネットワークは、全リンクに link_len が必要です。"
+    )
+    SECTION_CONFIG = "【1】実行設定"
+    SECTION_FORMULA = "【2】コストの計算式（道路上＝グラフ辺）"
+    SECTION_GRAPH = "【3】グラフ構築完了"
+    SECTION_RESULT = "【4】経路コスト結果"
+    SECTION_OD_DONE = "【4】OD 行列 処理完了"
+    CONFIG_NETWORK = "  ネットワークレイヤ: {name}"
+    CONFIG_NETWORK_COUNT = "  道路リンク数: {count} 本（検証済み）"
+    CONFIG_LINK_FIELD = "  リンク長フィールド: {field}"
+    CONFIG_MODE_DISTANCE = "  最適化: 最短（距離）… link_len [m] の合計を最小化"
+    CONFIG_MODE_TIME = "  最適化: 最速（時間）… link_len÷速度 [s] の合計を最小化"
+    CONFIG_SPEED_UNUSED = "  速度: 使用しません"
+    CONFIG_SPEED_USED = "  速度フィールド: {field} / デフォルト {default} km/h"
+    CONFIG_MERGE_NOTE = (
+        "  ※ 形状長（線の見た目の長さ）はコストに使いません。"
+        "架空道路も同じ link_len 列で評価されます。"
+    )
+    FORMULA_HINT_DISTANCE = (
+        "  → 高速道路より、link_len 合計が短い一般道ルートが選ばれやすいです。"
+    )
+    FORMULA_HINT_TIME = (
+        "  → 速度の高い幹線・高速道路が選ばれやすいです（link_len が長くても可）。"
+    )
+    GRAPH_STATS = "  頂点数: {vertices} / 辺数: {edges} / 構築時間: {sec:.2f} 秒"
+    GRAPH_STATS_TIME = "  構築時間: {sec:.2f} 秒"
+    RESULT_MODE_DISTANCE = "  モード: 最短（距離最適化）"
+    RESULT_MODE_TIME = "  モード: 最速（時間最適化）"
+    RESULT_UNIT = "  単位: {unit}（{unit_name}）"
+    RESULT_ROW_GRAPH = "  道路上のコスト（link_len 合計）: {val:,.3f} {unit}"
+    RESULT_ROW_ENTRY = "  接続・出発（点→道路の直線）: {val:,.3f} {unit}"
+    RESULT_ROW_EXIT = "  接続・到着（道路→点の直線）: {val:,.3f} {unit}"
+    RESULT_ROW_TOTAL = "  合計: {val:,.3f} {unit}"
+    RESULT_NOTE_SHAPE = "  ※ ジオメトリの長さ ($length) ではありません。"
+    RESULT_COMPARE_TIME = "  比較: 最速モードは「最適化基準」を時間に変えて再実行してください。"
+    RESULT_COMPARE_DISTANCE = "  比較: 最短モードは「最適化基準」を距離に変えて再実行してください。"
+    OD_PAIRS = "  到達可能な OD 組: {ok} / 処理対象 {total} 組"
+    OD_ATTR_HINT = (
+        "  出力の network_cost = 道路上（link_len 系）[{unit}]、"
+        "total_cost = 接続+道路+接続 [{unit}]"
+    )
+
     ISO_POINTCLOUD = "[QNEAT3] 等時点クラウドを計算しています..."
     ISO_INTERP = "[QNEAT3] TIN 補間ラスタを計算しています..."
     ISO_PROCESS_POINT = "[QNEAT3Network] 点 {counter} を処理中"
@@ -261,24 +307,129 @@ def log_msg(feedback, template, **kwargs):
     feedback.pushInfo(template.format(**kwargs))
 
 
+def log_separator(feedback):
+    """ログの視覚区切り。"""
+    feedback.pushInfo(LOG.SEPARATOR)
+
+
+def _network_source_label(feature_source):
+    """ネットワークレイヤの表示名。"""
+    if feature_source is None:
+        return "(不明)"
+    for attr in ("sourceName", "name"):
+        if hasattr(feature_source, attr):
+            label = getattr(feature_source, attr)()
+            if label:
+                return str(label)
+    return "(ネットワークレイヤ)"
+
+
+def log_run_intro(feedback):
+    """実行開始時の案内（バナー直後）。"""
+    log_separator(feedback)
+    feedback.pushInfo(LOG.RUN_INTRO)
+    log_separator(feedback)
+
+
+def log_network_run_summary(
+    feedback,
+    strategy_int,
+    link_field,
+    speed_field,
+    default_speed_kmh,
+    link_count,
+    network_label,
+):
+    """
+    ネットワーク・最適化モード・属性の一覧（国土地理院+手描き+架空の統合レイヤ向け）。
+    """
+    log_separator(feedback)
+    feedback.pushInfo(LOG.SECTION_CONFIG)
+    feedback.pushInfo(LOG.CONFIG_NETWORK.format(name=network_label))
+    feedback.pushInfo(LOG.CONFIG_NETWORK_COUNT.format(count=link_count))
+    feedback.pushInfo(LOG.CONFIG_LINK_FIELD.format(field=link_field))
+    if strategy_int == 0:
+        feedback.pushInfo(LOG.CONFIG_MODE_DISTANCE)
+        feedback.pushInfo(LOG.CONFIG_SPEED_UNUSED)
+    else:
+        feedback.pushInfo(LOG.CONFIG_MODE_TIME)
+        speed_label = speed_field if speed_field else "(未指定)"
+        feedback.pushInfo(
+            LOG.CONFIG_SPEED_USED.format(
+                field=speed_label, default=default_speed_kmh
+            )
+        )
+    feedback.pushInfo(LOG.CONFIG_MERGE_NOTE)
+    log_separator(feedback)
+    log_cost_formulas(feedback, strategy_int)
+
+
 def log_cost_formulas(feedback, strategy_int):
-    """グラフ構築前にコスト計算式をログへ明示する。"""
+    """コスト計算式（セクション付き）。"""
+    feedback.pushInfo(LOG.SECTION_FORMULA)
     if strategy_int == 0:
         feedback.pushInfo(LOG.FORMULA_EDGE_DISTANCE)
         feedback.pushInfo(LOG.FORMULA_CONN_DISTANCE)
+        feedback.pushInfo(LOG.FORMULA_HINT_DISTANCE)
     else:
         feedback.pushInfo(LOG.FORMULA_EDGE_TIME)
         feedback.pushInfo(LOG.FORMULA_CONN_TIME)
+        feedback.pushInfo(LOG.FORMULA_HINT_TIME)
+    log_separator(feedback)
+
+
+def log_graph_built_summary(feedback, graph, build_sec):
+    """グラフ構築完了後の規模。"""
+    try:
+        vertices = graph.vertexCount()
+        edges = graph.edgeCount()
+    except Exception:
+        vertices = edges = -1
+    log_separator(feedback)
+    feedback.pushInfo(LOG.SECTION_GRAPH)
+    if vertices >= 0 and edges >= 0:
+        feedback.pushInfo(
+            LOG.GRAPH_STATS.format(vertices=vertices, edges=edges, sec=build_sec)
+        )
+    else:
+        feedback.pushInfo(LOG.GRAPH_STATS_TIME.format(sec=build_sec))
+    log_separator(feedback)
 
 
 def log_path_cost_breakdown(feedback, strategy_int, entry, graph, exit_cost, total):
-    """経路・OD 出力直前のコスト内訳ログ。"""
+    """経路計算結果のコスト内訳（最短経路ツール等）。"""
+    unit = "m" if strategy_int == 0 else "s"
+    unit_name = "メートル" if strategy_int == 0 else "秒"
+    log_separator(feedback)
+    feedback.pushInfo(LOG.SECTION_RESULT)
     if strategy_int == 0:
-        feedback.pushInfo(LOG.PATH_COST_NOTE_DISTANCE)
+        feedback.pushInfo(LOG.RESULT_MODE_DISTANCE)
     else:
-        feedback.pushInfo(LOG.PATH_COST_NOTE_TIME)
+        feedback.pushInfo(LOG.RESULT_MODE_TIME)
+    feedback.pushInfo(LOG.RESULT_UNIT.format(unit=unit, unit_name=unit_name))
+    feedback.pushInfo(LOG.RESULT_ROW_GRAPH.format(val=graph, unit=unit))
+    feedback.pushInfo(LOG.RESULT_ROW_ENTRY.format(val=entry, unit=unit))
+    feedback.pushInfo(LOG.RESULT_ROW_EXIT.format(val=exit_cost, unit=unit))
+    feedback.pushInfo(LOG.RESULT_ROW_TOTAL.format(val=total, unit=unit))
+    feedback.pushInfo(LOG.RESULT_NOTE_SHAPE)
+    if strategy_int == 0:
+        feedback.pushInfo(LOG.RESULT_COMPARE_TIME)
+    else:
+        feedback.pushInfo(LOG.RESULT_COMPARE_DISTANCE)
+    log_separator(feedback)
+
+
+def log_od_run_footer(feedback, strategy_int, pairs_ok, pairs_total):
+    """OD 行列処理完了時のサマリ。"""
+    log_separator(feedback)
+    feedback.pushInfo(LOG.SECTION_OD_DONE)
+    feedback.pushInfo(LOG.OD_PAIRS.format(ok=pairs_ok, total=pairs_total))
+    unit = "m" if strategy_int == 0 else "s"
     feedback.pushInfo(
-        LOG.PATH_COST_VALUES.format(
-            entry=entry, graph=graph, exit=exit_cost, total=total
+        LOG.OD_ATTR_HINT.format(
+            unit=unit,
+            graph_col="network_cost",
+            total_col="total_cost",
         )
     )
+    log_separator(feedback)

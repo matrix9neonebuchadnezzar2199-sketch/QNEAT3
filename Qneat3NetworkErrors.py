@@ -208,17 +208,7 @@ def scan_network_link_lengths(feature_source, field_name, feedback=None):
             extra = ERR.LINK_LEN_TRUNCATED.format(max=MAX_REPORTED_FEATURES)
         raise_processing_exception(issues, extra=extra)
 
-    if feedback is not None:
-        from QNEAT3.Qneat3Strings import LOG, log_msg
-
-        log_msg(
-            feedback,
-            LOG.NET_LINK_LEN_VALIDATED,
-            field=field_name,
-            count=feature_count,
-        )
-
-    return field_index
+    return field_index, feature_count
 
 
 def raise_processing_exception(issues, extra=""):

@@ -61,7 +61,7 @@ from QNEAT3.Qneat3Utilities import (
     reconstruct_shortest_path_polyline,
 )
 
-from QNEAT3.Qneat3Strings import UIS, LOG, ja, NEO_PREFIX, log_msg
+from QNEAT3.Qneat3Strings import UIS, LOG, ja, NEO_PREFIX, log_msg, log_od_run_footer
 from QNEAT3.Qneat3HelpJa import help_od_matrix_layers_lines
 from QNEAT3.Qneat3ProcessingParams import add_advanced_network_params, strategy_labels, entry_cost_labels
 
@@ -236,7 +236,8 @@ class OdMatrixFromLayersAsLines(QgisAlgorithm):
         
         
         current_workstep_number = 0
-        
+        pairs_ok = 0
+
         for start_point in list_from_apoints:
             #optimize in case of undirected (not necessary to call calcDijkstra as it has already been calculated - can be replaced by reading from list)
             dijkstra_query = net.calcDijkstra(start_point.network_vertex_id, 0)
@@ -254,6 +255,7 @@ class OdMatrixFromLayersAsLines(QgisAlgorithm):
                     feat.setGeometry(QgsGeometry())
                     sink.addFeature(feat, QgsFeatureSink.FastInsert)
                 else:
+                    pairs_ok += 1
                     entry_cost = start_point.entry_cost
                     network_cost = dijkstra_query[1][query_point.network_vertex_id]
                     exit_cost = query_point.entry_cost
@@ -290,7 +292,10 @@ class OdMatrixFromLayersAsLines(QgisAlgorithm):
                 feedback.setProgress((current_workstep_number/total_workload)*100)
                     
         log_msg(feedback, LOG.OD_TOTAL, n=current_workstep_number)
-    
+        log_od_run_footer(
+            feedback, net.strategy_int, pairs_ok, int(total_workload)
+        )
+
         log_msg(feedback, LOG.ALG_END)
 
         results = {}

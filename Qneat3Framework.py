@@ -29,7 +29,15 @@ from qgis.analysis import QgsVectorLayerDirector, QgsGraphAnalyzer, QgsGraphBuil
 from qgis.PyQt.QtCore import QVariant
 
 from QNEAT3.Qneat3Utilities import getFieldIndexFromQgsProcessingFeatureSource, getListOfPoints, getFieldDatatypeFromPythontype
-from QNEAT3.Qneat3Strings import ERR, LOG, UIS, log_msg, log_cost_formulas
+from QNEAT3.Qneat3Strings import (
+    ERR,
+    LOG,
+    UIS,
+    log_msg,
+    log_graph_built_summary,
+    log_network_run_summary,
+    _network_source_label,
+)
 from QNEAT3.Qneat3NetworkErrors import (
     scan_network_link_lengths,
     require_link_length_field,
@@ -126,9 +134,8 @@ class Qneat3Network():
             self.input_points = input_points
     
         #Setup cost-strategy pattern.
-        log_msg(self.feedback, LOG.NET_STRATEGY, strategy=input_strategy)
         self.default_speed = input_defaultSpeed
-        log_msg(self.feedback, LOG.STRATEGY_UI_NOTE)
+        self._network_source = input_network
 
         self.setNetworkStrategy(
             input_strategy,
@@ -162,7 +169,8 @@ class Qneat3Network():
             LOG.NET_END_TIME,
             time=time.strftime("%Y-%m-%d %H:%M:%S", end_local_time),
         )
-        log_msg(self.feedback, LOG.NET_BUILD_SEC, sec=end_time - start_time)
+        build_sec = end_time - start_time
+        log_graph_built_summary(self.feedback, self.network, build_sec)
         log_msg(self.feedback, LOG.NET_DONE)
 
     def setNetworkDirection(self, directionArgs):    
@@ -181,7 +189,7 @@ class Qneat3Network():
         input_link_length_field,
     ):
         require_link_length_field(input_link_length_field)
-        link_field_index = scan_network_link_lengths(
+        link_field_index, link_count = scan_network_link_lengths(
             input_network, input_link_length_field, self.feedback
         )
         self._link_len_field_index = link_field_index
@@ -192,18 +200,6 @@ class Qneat3Network():
             self.strategy = Qneat3LinkLengthStrategy(
                 link_field_index, input_link_length_field
             )
-            log_msg(
-                self.feedback,
-                LOG.NET_STRATEGY_MODE,
-                mode="最短距離（link_len 属性）",
-            )
-            log_msg(
-                self.feedback,
-                LOG.NET_LINK_FIELD,
-                field=input_link_length_field,
-            )
-            log_msg(self.feedback, LOG.NET_DISTANCE_SKIPS_SPEED)
-            log_cost_formulas(self.feedback, 0)
         else:
             require_positive_default_speed(input_defaultSpeed)
             speed_field_id = getFieldIndexFromQgsProcessingFeatureSource(
@@ -216,18 +212,16 @@ class Qneat3Network():
                 float(input_defaultSpeed),
             )
             self.strategy_int = 1
-            log_msg(
-                self.feedback,
-                LOG.NET_STRATEGY_MODE,
-                mode="最速（link_len ÷ 速度。形状長は未使用）",
-            )
-            log_msg(
-                self.feedback,
-                LOG.NET_TIME_USES_LINK_LEN,
-                field=input_link_length_field,
-                speed_field=input_speedField or "(未指定→デフォルト速度)",
-            )
-            log_cost_formulas(self.feedback, 1)
+
+        log_network_run_summary(
+            self.feedback,
+            self.strategy_int,
+            input_link_length_field,
+            input_speedField,
+            float(input_defaultSpeed),
+            link_count,
+            _network_source_label(input_network),
+        )
         self.multiplier = 3600
 
     def calcDijkstra(self, startpoint_id, criterion):
@@ -629,7 +623,6 @@ class Qneat3AnalysisPoint():
         dist_calculator.setSourceCrs(QgsProject().instance().crs(), QgsProject().instance().transformContext())
         dist_calculator.setEllipsoid(QgsProject().instance().crs().ellipsoidAcronym())
         dist = dist_calculator.measureLine([self.point_geom, self.network_vertex.point()])
-        log_msg(feedback, LOG.ENTRY_ELLIP, vid=self.network_vertex_id, dist=dist)
         if self.strategy == 0:
             return dist
         else:
@@ -637,7 +630,6 @@ class Qneat3AnalysisPoint():
     
     def calcEntryCostPlanar(self, feedback):
         dist = self.calcEntryLinestring().length()
-        log_msg(feedback, LOG.ENTRY_PLANAR, vid=self.network_vertex_id, dist=dist)
         if self.strategy == 0:
             return dist
         else:
