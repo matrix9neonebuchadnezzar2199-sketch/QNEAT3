@@ -78,7 +78,7 @@ class IsoAreaAsInterpolationFromLayer(QgisAlgorithm):
     OUTPUT = 'OUTPUT'
 
     def icon(self):
-        return QIcon(icon_path('icon_servicearea_interpolation_multiple.png'))
+        return QIcon(icon_path('icon_servicearea_points_multiple.svg'))
 
     def group(self):
         return ja(NEO_PREFIX + UIS.ISO_AREAS)

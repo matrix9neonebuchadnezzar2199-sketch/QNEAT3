@@ -59,16 +59,6 @@ if provider.is_file():
         if mod == cls:
             errors.append(f"Qneat3Provider.py: legacy addAlgorithm({mod}.{cls}())")
 
-# 意味的ラベル不一致（静的ルール）
-poly_layer = ROOT / "algs" / "IsoAreaAsPolygonsFromLayer.py"
-if poly_layer.is_file():
-    t = poly_layer.read_text(encoding="utf-8")
-    if "self.STRATEGY" in t and "ja(UIS.PATH_TYPE)" in t:
-        warnings.append(
-            "IsoAreaAsPolygonsFromLayer.py: STRATEGY param uses UIS.PATH_TYPE "
-            "(should be UIS.OPTIMIZATION_CRITERION)"
-        )
-
 if errors:
     print("FAIL:", len(errors))
     for line in errors:

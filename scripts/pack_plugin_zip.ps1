@@ -33,6 +33,8 @@ python (Join-Path $src "scripts\validate_network_errors.py")
 if ($LASTEXITCODE -ne 0) { throw "network error template validation failed" }
 python (Join-Path $src "scripts\verify_provider_register.py")
 if ($LASTEXITCODE -ne 0) { throw "Provider register validation failed" }
+python (Join-Path $src "scripts\test_quality.py")
+if ($LASTEXITCODE -ne 0) { throw "test_quality.py failed" }
 Compress-Archive -Path $dest -DestinationPath $zipPath -Force
 Remove-Item $staging -Recurse -Force
 Write-Host "Created: $zipPath"

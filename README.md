@@ -16,6 +16,16 @@
 
 公式の **再インストール** は使わず、クリーン導入してください。詳細は [README.html#plugin-broken](README.html#plugin-broken)
 
+## 開発者向け品質チェック（QGIS 不要）
+
+パック／コミット前にリポジトリルートで実行:
+
+```powershell
+python TEST.py
+```
+
+構文・UTF-8・シンボル参照・アイコン存在・Provider 登録・link_len パーサ単体テストを一括実行します。
+
 ## 検証手順（STEPS）
 
 更新反映・`link_len` 動作・距離/時間切替の確認手順は HTML 版に記載:
