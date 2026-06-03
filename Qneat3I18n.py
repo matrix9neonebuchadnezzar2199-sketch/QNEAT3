@@ -23,23 +23,14 @@ def install_plugin_translator():
     if _TRANSLATOR is not None:
         return
 
-    locale = QLocale()
-    lang = locale.name()  # 例: ja_JP
-    if not lang.lower().startswith("ja"):
-        # NEO フォーク: 日本語 UI を優先する場合は下記を True に
-        pass
-
+    # NEO: パラメータは ja() で日本語固定。qm があれば追加で上書き可能。
     trans = QTranslator()
     i18n_path = os.path.join(plugin_dir(), "i18n")
-    loaded = False
     for name in ("qneat3_ja", "QNEAT3_ja"):
         if trans.load(name, i18n_path):
-            loaded = True
+            QCoreApplication.installTranslator(trans)
+            _TRANSLATOR = trans
             break
-
-    if loaded:
-        QCoreApplication.installTranslator(trans)
-        _TRANSLATOR = trans
 
 
 def tr(context, message):

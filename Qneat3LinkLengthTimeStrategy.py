@@ -12,6 +12,7 @@ from QNEAT3.Qneat3NetworkErrors import (
     parse_speed_kmh,
     raise_processing_exception,
 )
+from QNEAT3.Qneat3Strings import ERR
 
 # km/h → m/s（QgsNetworkSpeedStrategy と同じ換算係数）
 KMH_TO_MPS = 1000.0 / 3600.0
@@ -50,7 +51,7 @@ class Qneat3LinkLengthTimeStrategy(QgsNetworkStrategy):
         )
         if speed_kmh is None:
             raise QgsProcessingException(
-                "フィーチャ ID={}: 速度が正の数値ではありません。".format(feature.id())
+                ERR.EDGE_SPEED_INVALID.format(fid=feature.id())
             )
 
         speed_mps = speed_kmh * KMH_TO_MPS

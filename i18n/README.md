@@ -2,7 +2,7 @@
 
 ## 動作
 
-- UI 文言は `Qneat3Strings.py` の日本語を `self.tr()` に渡す方式（`.qm` なしでも日本語表示）。
+- UI 文言は `Qneat3Strings.py` の日本語を `ja()` でそのまま表示（`self.tr()` は使わない。公式翻訳との干渉を避ける）。
 - QGIS の UI 言語が日本語のとき、`qneat3_ja.qm` があれば上書き翻訳も可能。
 
 ## .qm のビルド（任意）

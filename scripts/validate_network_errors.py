@@ -20,6 +20,8 @@ REQUIRED_ERR = (
     "DEFAULT_SPEED_INVALID",
 )
 
+ERR_IN_TIME_STRATEGY = ("EDGE_SPEED_INVALID",)
+
 errors = []
 for name in REQUIRED_ERR:
     if not hasattr(ERR, name):
@@ -37,6 +39,18 @@ for err_name in REQUIRED_ERR:
 
 if "DEFAULT_SPEED_INVALID" not in text:
     errors.append("require_positive_default_speed must use ERR.DEFAULT_SPEED_INVALID")
+
+for err_name in ERR_IN_TIME_STRATEGY:
+    if not hasattr(ERR, err_name):
+        errors.append("ERR.{} missing".format(err_name))
+time_strat = ROOT / "Qneat3LinkLengthTimeStrategy.py"
+if time_strat.exists():
+    ts = time_strat.read_text(encoding="utf-8")
+    for err_name in ERR_IN_TIME_STRATEGY:
+        if "ERR.{}".format(err_name) not in ts:
+            errors.append(
+                "Qneat3LinkLengthTimeStrategy must use ERR.{}".format(err_name)
+            )
 
 if errors:
     print("FAIL:", len(errors))

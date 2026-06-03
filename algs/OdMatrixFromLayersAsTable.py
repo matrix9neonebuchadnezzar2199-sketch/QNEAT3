@@ -125,7 +125,7 @@ class OdMatrixFromLayersAsTable(QgisAlgorithm):
                                                               [QgsProcessing.TypeVectorPoint]))
         
         self.addParameter(QgsProcessingParameterField(self.FROM_ID_FIELD,
-                                                       ja(UIS.UNIQUE_POINT_ID),
+                                                       ja(UIS.FROM_POINT_ID_FIELD),
                                                        None,
                                                        self.FROM_POINT_LAYER,
                                                        optional=False))
@@ -135,7 +135,7 @@ class OdMatrixFromLayersAsTable(QgisAlgorithm):
                                                       [QgsProcessing.TypeVectorPoint]))
         
         self.addParameter(QgsProcessingParameterField(self.TO_ID_FIELD,
-                                                     ja(UIS.UNIQUE_POINT_ID),
+                                                     ja(UIS.TO_POINT_ID_FIELD),
                                                      None,
                                                      self.TO_POINT_LAYER,
                                                      optional=False))

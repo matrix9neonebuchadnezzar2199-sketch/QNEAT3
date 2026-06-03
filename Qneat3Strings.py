@@ -33,6 +33,8 @@ class UIS:
     POINT_LAYER = "ポイントレイヤ"
     FROM_POINT_LAYER = "出発点レイヤ"
     TO_POINT_LAYER = "到着点レイヤ"
+    FROM_POINT_ID_FIELD = "出発点 ID フィールド"
+    TO_POINT_ID_FIELD = "到着点 ID フィールド"
     UNIQUE_POINT_ID = "ポイント ID フィールド"
     OPTIMIZATION_CRITERION = "最適化基準"
     ENTRY_COST_METHOD = "ネットワーク接続コストの算定方法"
@@ -44,7 +46,7 @@ class UIS:
     SPEED_FIELD = "速度フィールド"
     DEFAULT_SPEED_KMH = "デフォルト速度 (km/h)"
     TOPOLOGY_TOLERANCE = "トポロジ許容差"
-    LINK_LENGTH_FIELD = "リンク長フィールド（距離最適化時必須・時間最適化時は未使用）"
+    LINK_LENGTH_FIELD = "リンク長フィールド（距離・時間の両方で必須）"
 
     # 列挙ラベル
     STRATEGY_DISTANCE = "最短経路（距離最適化）"
@@ -227,13 +229,20 @@ class ERR:
 
     DEFAULT_SPEED_INVALID = (
         "時間最適化では「デフォルト速度 (km/h)」に正の値が必要です。\n"
-        "最短経路（距離最適化）を選ぶ場合、速度パラメータは使用されません（0 でも可）。"
+        "距離最適化を選んだ場合は速度パラメータは使用されません（0 でも可）。"
+    )
+    EDGE_SPEED_INVALID = (
+        "フィーチャ ID={fid}: 速度フィールドの値が 0 以下です。"
+        "正の km/h を設定するか、デフォルト速度を使用できるようフィールドを空にしてください。"
     )
 
 
 class META:
-    PLUGIN_NAME = "QNEAT3 - ネットワーク解析"
-    PROVIDER_NAME = "QNEAT3 - QGIS ネットワーク解析ツールボックス"
+    PLUGIN_NAME = "QNEAT3 NEO - ネットワーク解析"
+    PROVIDER_NAME = "QNEAT3 NEO - ネットワーク解析ツールボックス"
+    PLUGIN_DESCRIPTION = (
+        "最短経路・OD 行列・等時圏。距離・時間ともリンク長属性でコスト計算。日本語 UI。"
+    )
 
 
 def provider_display_name():
