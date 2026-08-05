@@ -31,4 +31,5 @@ class Qneat3LinkLengthStrategy(QgsNetworkStrategy):
     return length
 
   def requiredAttributes(self):
-    return {self.field_index}
+    #Qt6/SIP6 系では set は QSet<int> に変換できないため list で返す
+    return [self.field_index]

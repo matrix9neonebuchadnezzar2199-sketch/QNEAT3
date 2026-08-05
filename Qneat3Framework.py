@@ -121,6 +121,17 @@ class Qneat3Network():
                 input_defaultDirection,
             )
         )
+        #parameterAsEnum は int を返す。Qt6/SIP6 系の QGIS では
+        #QgsVectorLayerDirector が int を Direction として受け付けないため、
+        #列挙メンバーに変換してから渡す（index は DirectionForward/Backward/Both の順）
+        if isinstance(input_defaultDirection, int):
+            direction_enums = (
+                QgsVectorLayerDirector.DirectionForward,
+                QgsVectorLayerDirector.DirectionBackward,
+                QgsVectorLayerDirector.DirectionBoth,
+            )
+            input_defaultDirection = direction_enums[input_defaultDirection]
+
         self.director = QgsVectorLayerDirector(input_network,
                                     getFieldIndexFromQgsProcessingFeatureSource(input_network, input_directionFieldName),
                                     input_forwardValue,

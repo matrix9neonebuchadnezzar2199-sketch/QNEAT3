@@ -6,5 +6,6 @@ __pycache__/
 *.pyc
 *.pyo
 dist/*.zip
+docker/out/
 debug-*.log
 NEO_load_error.txt

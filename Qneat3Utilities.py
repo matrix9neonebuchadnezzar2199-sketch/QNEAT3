@@ -17,7 +17,7 @@
 ***************************************************************************
 """
 
-from qgis.core import QgsWkbTypes, QgsMessageLog, QgsVectorLayer, QgsFeature, QgsGeometry, QgsFields, QgsField, QgsFeatureRequest
+from qgis.core import QgsWkbTypes, QgsMessageLog, QgsVectorLayer, QgsFeature, QgsGeometry, QgsFields, QgsField, QgsFeatureRequest, QgsPointXY
 
 from qgis.PyQt.QtCore import QVariant
 from QNEAT3.Qneat3Exceptions import Qneat3GeometryException

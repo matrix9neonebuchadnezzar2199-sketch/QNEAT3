@@ -58,7 +58,8 @@ class Qneat3LinkLengthTimeStrategy(QgsNetworkStrategy):
         return link_len / speed_mps
 
     def requiredAttributes(self):
+        #Qt6/SIP6 系では set は QSet<int> に変換できないため list で返す
         attrs = {self.link_field_index}
         if self.speed_field_index >= 0:
             attrs.add(self.speed_field_index)
-        return attrs
+        return sorted(attrs)

@@ -143,6 +143,16 @@ python TEST.py
 
 すべて exit 0 のあと ZIP 作成。
 
+### コンテナ実機スモーク（「QGIS検証」、1.0.23〜）
+
+```powershell
+docker build -f docker/Dockerfile -t qgis-neo-verify:latest .
+docker run --rm -v "${PWD}\docker\out:/out" qgis-neo-verify:latest
+```
+
+スタブ単体テストでは検出できない SIP 型変換・import 漏れを `qgis_process` 実機で検出する
+（詳細: `docker/README.md`）。ZIP 作成前に `SMOKE PASS` を確認。
+
 ## 9. UI とオフネットワーク目的地（運用メモ）
 
 | UI（メイン） | 最適化基準 → 最短 / 最速 |

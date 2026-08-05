@@ -1,0 +1,14 @@
+# QGIS検証 — 便利ラッパ（無くても docker 単体で動く）
+# プロジェクト名・イメージ名・コンテナ名はすべて qgis-neo-verify で統一し、
+# 他の Docker 資産と衝突しないようにする。
+name: qgis-neo-verify
+
+services:
+  qgis:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile
+    image: qgis-neo-verify:latest
+    container_name: qgis-neo-verify
+    volumes:
+      - ./out:/out
