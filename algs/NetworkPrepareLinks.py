@@ -53,6 +53,7 @@ from QNEAT3.Qneat3Strings import (
 )
 from QNEAT3.Qneat3HelpJa import help_network_prepare_links
 from QNEAT3.Qneat3Paths import icon_path
+from QNEAT3.Qneat3BuildInfo import push_build_banner
 from processing.algs.qgis.QgisAlgorithm import QgisAlgorithm
 
 # 主成分に属さないリンクのログ表示上限
@@ -116,6 +117,7 @@ class NetworkPrepareLinks(QgisAlgorithm):
 
     def processAlgorithm(self, parameters, context, feedback):
         log_msg(feedback, LOG.ALG_START, name=self.displayName())
+        push_build_banner(feedback)
 
         source = self.parameterAsSource(parameters, self.INPUT, context)
         field_name = self.parameterAsString(
