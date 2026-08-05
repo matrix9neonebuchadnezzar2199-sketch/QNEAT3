@@ -4,17 +4,17 @@
   "features": [
     {
       "type": "Feature",
-      "properties": { "id": "base", "link_len": 5000.0 },
+      "properties": { "id": "base", "link_len": 5000.0, "speed": 100.0 },
       "geometry": { "type": "LineString", "coordinates": [[0, 0], [1000, 0]] }
     },
     {
       "type": "Feature",
-      "properties": { "id": "fictional", "link_len": 300.0 },
+      "properties": { "id": "fictional", "link_len": 300.0, "speed": 5.0 },
       "geometry": { "type": "LineString", "coordinates": [[500, 1000], [500, 3]] }
     },
     {
       "type": "Feature",
-      "properties": { "id": "dangler_null", "link_len": null },
+      "properties": { "id": "dangler_null", "link_len": null, "speed": null },
       "geometry": { "type": "LineString", "coordinates": [[100, 800], [200, 800]] }
     }
   ]

@@ -38,7 +38,9 @@ docker compose up --build
 | 1 | `qgis_process list` に `qneat3:networkpreparelinks` | Provider 登録 |
 | 2 | ネットワーク前処理を実行 | T 字突き当たりの架空道路で既存リンクを分割 |
 | 3 | 出力の `link_len` | base 5000 → 2500×2（按分）、架空 300（保持）、NULL → 実測 ≈100（補完） |
-| 4 | 最短経路 (500,1000)→(0,0) | 架空道路経由で `cost_on_graph = total_cost = 2800`（300 + 2500） |
+| 4 | 最短経路（距離）(500,1000)→(0,0) | 架空道路経由で `cost = 2800`（300 + 2500） |
+| 5 | 最短経路（時間・速度フィールド） | 架空 300 m @5km/h = 216 s + base 2500 m @100km/h = 90 s → `cost = 306 s` |
+| 6 | OD 行列（ポイント・ライン n:n、経路ジオメトリ） | A↔B 双方向 `network_cost = 2800`＋経路ジオメトリ非空 |
 
 ## 制約
 

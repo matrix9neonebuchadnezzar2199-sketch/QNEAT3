@@ -1,0 +1,16 @@
+{
+  "type": "FeatureCollection",
+  "crs": { "type": "name", "properties": { "name": "urn:ogc:def:crs:EPSG::3857" } },
+  "features": [
+    {
+      "type": "Feature",
+      "properties": { "pid": "A" },
+      "geometry": { "type": "Point", "coordinates": [500, 1000] }
+    },
+    {
+      "type": "Feature",
+      "properties": { "pid": "B" },
+      "geometry": { "type": "Point", "coordinates": [0, 0] }
+    }
+  ]
+}
