@@ -2,6 +2,7 @@
 """Processing アルゴリズムモジュール（Qneat3Provider から import）。"""
 
 from QNEAT3.algs.DummyAlgorithm import DummyAlgorithm
+from QNEAT3.algs.NetworkPrepareLinks import NetworkPrepareLinks
 from QNEAT3.algs.IsoAreaAsContoursFromLayer import IsoAreaAsContoursFromLayer
 from QNEAT3.algs.IsoAreaAsContoursFromPoint import IsoAreaAsContoursFromPoint
 from QNEAT3.algs.IsoAreaAsInterpolationFromLayer import IsoAreaAsInterpolationFromLayer
@@ -22,6 +23,7 @@ from QNEAT3.algs.ShortestPathBetweenPoints import ShortestPathBetweenPoints
 
 __all__ = [
     "DummyAlgorithm",
+    "NetworkPrepareLinks",
     "IsoAreaAsContoursFromLayer",
     "IsoAreaAsContoursFromPoint",
     "IsoAreaAsInterpolationFromLayer",

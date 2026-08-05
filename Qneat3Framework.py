@@ -28,7 +28,7 @@ from qgis.core import QgsProject, QgsPoint, QgsVectorLayer, QgsRasterLayer, QgsF
 from qgis.analysis import QgsVectorLayerDirector, QgsGraphAnalyzer, QgsGraphBuilder, QgsInterpolator, QgsTinInterpolator, QgsGridFileWriter
 from qgis.PyQt.QtCore import QVariant
 
-from QNEAT3.Qneat3Utilities import getFieldIndexFromQgsProcessingFeatureSource, getListOfPoints, getFieldDatatypeFromPythontype
+from QNEAT3.Qneat3Utilities import getFieldIndexFromQgsProcessingFeatureSource, getListOfPoints, getFieldDatatypeFromPythontype, getFeaturesFromQgsIterable, feature_geometry_part_tuples
 from QNEAT3.Qneat3Strings import (
     ERR,
     LOG,
@@ -42,9 +42,12 @@ from QNEAT3.Qneat3NetworkErrors import (
     scan_network_link_lengths,
     require_link_length_field,
     require_positive_default_speed,
+    parse_positive_link_length,
+    parse_speed_kmh,
 )
 from QNEAT3.Qneat3LinkLengthStrategy import Qneat3LinkLengthStrategy
-from QNEAT3.Qneat3LinkLengthTimeStrategy import Qneat3LinkLengthTimeStrategy
+from QNEAT3.Qneat3LinkLengthTimeStrategy import Qneat3LinkLengthTimeStrategy, KMH_TO_MPS
+from QNEAT3.Qneat3EdgeGeometryIndex import EdgeGeometryIndex
 from QNEAT3.Qneat3BuildInfo import push_build_banner
 from qgis.core import QgsSpatialIndex
 
@@ -145,6 +148,11 @@ class Qneat3Network():
             input_link_length_field,
         )
 
+        #経路出力をリンク形状に沿わせるための索引（コスト計算には使わない）
+        self.edge_geometry_index = self._build_edge_geometry_index(
+            input_network, input_tolerance
+        )
+
         #add the strategy to the QgsGraphDirector
         self.director.addStrategy(self.strategy)
         self.builder = QgsGraphBuilder(self.AnalysisCrs, True, input_tolerance)
@@ -197,6 +205,7 @@ class Qneat3Network():
 
         if input_strategy == 0:
             self.strategy_int = 0
+            self._speed_field_index = -1
             self.strategy = Qneat3LinkLengthStrategy(
                 link_field_index, input_link_length_field
             )
@@ -205,6 +214,7 @@ class Qneat3Network():
             speed_field_id = getFieldIndexFromQgsProcessingFeatureSource(
                 input_network, input_speedField
             )
+            self._speed_field_index = speed_field_id
             self.strategy = Qneat3LinkLengthTimeStrategy(
                 link_field_index,
                 input_link_length_field,
@@ -223,6 +233,43 @@ class Qneat3Network():
             _network_source_label(input_network),
         )
         self.multiplier = 3600
+
+    def _build_edge_geometry_index(self, input_network, input_tolerance):
+        """
+        グラフ辺 → 元リンク形状の索引を構築する。
+
+        QgsGraphEdge はジオメトリを保持しないため、経路出力時に
+        頂点座標から元リンク形状を引くために使う（コスト計算には使わない）。
+        コストはグラフ構築と同じ式で登録し、同一端点の並行リンクの
+        区別に使う。
+        """
+        index = EdgeGeometryIndex(input_tolerance)
+        link_field_index = self._link_len_field_index
+        speed_field_index = getattr(self, "_speed_field_index", -1)
+        for feature in getFeaturesFromQgsIterable(input_network):
+            parts = feature_geometry_part_tuples(feature)
+            if not parts:
+                continue
+            link_len, issue = parse_positive_link_length(
+                feature.attribute(link_field_index),
+                feature.id(),
+                self._link_len_field_name,
+            )
+            if issue:
+                # scan_network_link_lengths で検証済みのため通常到達しない
+                continue
+            if self.strategy_int == 0:
+                edge_cost = link_len
+            else:
+                speed_kmh = parse_speed_kmh(
+                    feature, speed_field_index, self.default_speed, feature.id()
+                )
+                if not speed_kmh or speed_kmh <= 0:
+                    continue
+                edge_cost = link_len / (speed_kmh * KMH_TO_MPS)
+            for pts in parts:
+                index.add(pts, edge_cost)
+        return index
 
     def calcDijkstra(self, startpoint_id, criterion):
         """Calculates Dijkstra on whole network beginning from one startPoint. Returns a list containing a TreeId-Array and Cost-Array that match up with their indices [[tree],[cost]] """

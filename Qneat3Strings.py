@@ -23,6 +23,7 @@ class UIS:
     ROUTING = "経路"
     DISTANCE_MATRICES = "距離行列"
     ISO_AREAS = "等時圏・到達圏"
+    NETWORK_PREP = "ネットワーク整備"
 
     # 共通パラメータ
     NETWORK_LAYER = "ネットワークレイヤ"
@@ -48,6 +49,11 @@ class UIS:
     TOPOLOGY_TOLERANCE = "トポロジ許容差"
     LINK_LENGTH_FIELD = "リンク長フィールド（距離・時間の両方で必須）"
 
+    # ネットワーク前処理
+    PREP_LINK_FIELD = "リンク長フィールド（レイヤに無ければ作成）"
+    PREP_SNAP_TOLERANCE = "接続スナップ許容差（レイヤの CRS 単位）"
+    PREP_FILL_LENGTH = "未入力・不正な link_len を実測長で補完する"
+
     # 列挙ラベル
     STRATEGY_DISTANCE = "最短経路（距離最適化）"
     STRATEGY_TIME = "最速経路（時間最適化）"
@@ -62,6 +68,7 @@ class UIS:
 
     # 出力
     OUTPUT_SHORTEST_PATH = "最短経路レイヤ"
+    OUTPUT_PREPARED_NETWORK = "前処理済みネットワーク出力"
     OUTPUT_OD_MATRIX = "OD 行列出力"
     OUTPUT_INTERPOLATION = "補間ラスタ出力"
     OUTPUT_CONTOURS = "等値線出力"
@@ -169,6 +176,23 @@ class LOG:
     PATH_COST_VALUES = (
         "[QNEAT3] コスト値: entry={entry:.4f} graph={graph:.4f} exit={exit:.4f} total={total:.4f}"
     )
+    PATH_GEOM_FALLBACK = (
+        "[QNEAT3] 経路描画: {count} 辺はリンク形状を特定できず"
+        "頂点間直線で描画しました（コスト計算には影響しません）。"
+    )
+
+    # ネットワーク前処理
+    PREP_READ = "[QNEAT3Prep] 入力: {features} フィーチャ → {parts} パート（マルチパート分解）"
+    PREP_FILLED = "[QNEAT3Prep] link_len を実測長で補完: {count} 件"
+    PREP_SNAP_SPLIT = (
+        "[QNEAT3Prep] 端点スナップ: {snaps} 件 / "
+        "分割対象リンク: {links} 本（{events} 箇所で分割）"
+    )
+    PREP_COMPONENTS = "[QNEAT3Prep] 連結成分: {count} 個（最大成分: {largest} リンク）"
+    PREP_ISOLATED = (
+        "[QNEAT3Prep] 警告: 主成分に属さないリンク（経路計算で到達不能）: {indices}"
+    )
+    PREP_DONE = "[QNEAT3Prep] 出力: {count} リンク（link_len 合計 {total:.1f}）"
 
     # 見やすいログ（セクション表示）
     SEPARATOR = "────────────────────────────────────────"
@@ -280,6 +304,12 @@ class ERR:
     EDGE_SPEED_INVALID = (
         "フィーチャ ID={fid}: 速度フィールドの値が 0 以下です。"
         "正の km/h を設定するか、デフォルト速度を使用できるようフィールドを空にしてください。"
+    )
+
+    # ネットワーク前処理
+    PREP_LINK_LEN_INVALID = (
+        "フィーチャ ID={fid}: link_len が未入力または不正です（値={value!r}）。"
+        "「実測長で補完」を有効にするか、正の値を設定してください。"
     )
 
 

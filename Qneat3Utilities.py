@@ -124,46 +124,96 @@ def predecessor_vertex_on_tree(network, edge_id, at_vertex):
     return -1
 
 
-def reconstruct_shortest_path_polyline(
+def feature_geometry_part_tuples(feature):
+    """
+    フィーチャのラインジオメトリをパートごとの (x, y) タプル列に分解する。
+
+    マルチパートは各パートを個別に返す（QGIS グラフもパート単位で辺を作る）。
+    空・非ライン・2 点未満のパートは除外。
+
+    Returns:
+        list[list[tuple]]: パートごとの座標列。該当なしなら空リスト。
+    """
+    geom = feature.geometry()
+    if geom is None or geom.isEmpty():
+        return []
+    if geom.isMultipart():
+        raw_parts = geom.asMultiPolyline()
+    else:
+        raw_parts = [geom.asPolyline()]
+    parts = []
+    for part in raw_parts:
+        pts = [(p.x(), p.y()) for p in part]
+        if len(pts) >= 2:
+            parts.append(pts)
+    return parts
+
+
+def reconstruct_path_geometry(
     network,
     tree,
     start_vertex_id,
     end_vertex_id,
     start_point_geom,
     end_point_geom,
+    geom_index=None,
 ):
     """
-    Dijkstra 木から始点→終点の折れ線（QgsPointXY のリスト）を構築する。
+    Dijkstra 木から始点→終点の経路（QgsPointXY のリスト）を構築する。
+
+    geom_index（EdgeGeometryIndex）があれば各グラフ辺を元リンク形状でなぞる。
+    見つからない辺は従来通り頂点間の直線にフォールバックする。
+    entry/exit（点↔最寄り頂点）は設計通り直線のまま。
 
     Returns:
-        list[QgsPointXY]: start_point_geom から end_point_geom へ。到達不能時は None。
+        tuple: (list[QgsPointXY] | None, int) — (経路, 直線フォールバックした辺数)。
+        到達不能時は (None, 0)。
     """
     if tree[end_vertex_id] == -1:
-        return None
+        return None, 0
     if start_vertex_id == end_vertex_id:
-        return [start_point_geom, end_point_geom]
+        return [start_point_geom, end_point_geom], 0
 
-    path = [end_point_geom, network.vertex(end_vertex_id).point()]
+    # 終点→始点へ木を遡り、(edge_id, from_vid, to_vid) を始点→終点順に並べる
+    hops = []
     current = end_vertex_id
     max_hops = network.vertexCount() + 2
-
     for _ in range(max_hops):
         if current == start_vertex_id:
             break
         edge_id = tree[current]
         if edge_id < 0:
-            return None
+            return None, 0
         previous = predecessor_vertex_on_tree(network, edge_id, current)
         if previous < 0:
-            return None
+            return None, 0
+        hops.append((edge_id, previous, current))
         current = previous
-        path.append(network.vertex(current).point())
     else:
-        return None
+        return None, 0
+    hops.reverse()
 
-    path.append(start_point_geom)
-    path.reverse()
-    return path
+    points = [start_point_geom]
+    fallback_count = 0
+    for edge_id, from_vid, to_vid in hops:
+        a = network.vertex(from_vid).point()
+        b = network.vertex(to_vid).point()
+        seg = None
+        if geom_index is not None:
+            seg = geom_index.lookup(
+                (a.x(), a.y()), (b.x(), b.y()), network.edge(edge_id).cost(0)
+            )
+        if seg is None:
+            if geom_index is not None:
+                fallback_count += 1
+            seg = [(a.x(), a.y()), (b.x(), b.y())]
+        else:
+            # 継ぎ目の連続性を保証するため両端はグラフ頂点座標に合わせる
+            seg[0] = (a.x(), a.y())
+            seg[-1] = (b.x(), b.y())
+        points.extend(QgsPointXY(x, y) for x, y in seg[1:])
+    points.append(end_point_geom)
+    return points, fallback_count
         
 def getFieldDatatype(qgs_feature_storage, fieldname):
     fields_list = qgs_feature_storage.fields()

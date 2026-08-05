@@ -42,6 +42,7 @@ _matplotlib_found = _matplotlib_available()
 # 全アルゴリズムは algs/__init__.py 経由（相対 import と絶対 import の混在を避ける）
 from QNEAT3.algs import (
     DummyAlgorithm,
+    NetworkPrepareLinks,
     IsoAreaAsContoursFromLayer,
     IsoAreaAsContoursFromPoint,
     IsoAreaAsInterpolationFromLayer,
@@ -85,6 +86,7 @@ class Qneat3Provider(QgsProcessingProvider):
 
     def loadAlgorithms(self, *args, **kwargs):
         # algs/__init__.py からクラスを import しているため X.X() ではなく X() とする
+        self.addAlgorithm(NetworkPrepareLinks())
         self.addAlgorithm(ShortestPathBetweenPoints())
         self.addAlgorithm(IsoAreaAsPointcloudFromPoint())
         self.addAlgorithm(IsoAreaAsPointcloudFromLayer())

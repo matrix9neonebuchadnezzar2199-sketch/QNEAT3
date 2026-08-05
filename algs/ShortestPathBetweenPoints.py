@@ -39,7 +39,7 @@ from qgis.core import (QgsWkbTypes,
                        QgsProcessingParameterFeatureSink)
 
 from QNEAT3.Qneat3Framework import Qneat3Network, Qneat3AnalysisPoint
-from QNEAT3.Qneat3Utilities import getFeatureFromPointParameter, reconstruct_shortest_path_polyline
+from QNEAT3.Qneat3Utilities import getFeatureFromPointParameter, reconstruct_path_geometry
 from QNEAT3.Qneat3Strings import (
     UIS,
     LOG,
@@ -180,17 +180,20 @@ class ShortestPathBetweenPoints(QgisAlgorithm):
         if dijkstra_query[0][end_vertex_idx] == -1:
             raise QgsProcessingException(ja(ERR.NO_PATH))
 
-        path_elements = reconstruct_shortest_path_polyline(
+        path_elements, geom_fallbacks = reconstruct_path_geometry(
             net.network,
             dijkstra_query[0],
             start_vertex_idx,
             end_vertex_idx,
             list_analysis_points[0].point_geom,
             list_analysis_points[1].point_geom,
+            net.edge_geometry_index,
         )
         if path_elements is None:
             raise QgsProcessingException(ja(ERR.NO_PATH))
         log_msg(feedback, LOG.PATH_TOTAL_NODES, count=len(path_elements))
+        if geom_fallbacks:
+            log_msg(feedback, LOG.PATH_GEOM_FALLBACK, count=geom_fallbacks)
 
         start_entry_cost = list_analysis_points[0].entry_cost
         end_exit_cost = list_analysis_points[1].entry_cost

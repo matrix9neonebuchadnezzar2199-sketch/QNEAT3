@@ -155,6 +155,7 @@ nav.toc li { margin: 0.35rem 0; }
     <li><a href="#usage">基本的な使い方</a></li>
     <li><a href="#verify-steps">検証手順（STEPS）</a></li>
     <li><a href="#distance-time">最短距離と最短時間の違い</a></li>
+    <li><a href="#fictional-road">架空道路を追加して計算する</a></li>
     <li><a href="docs/COST_FORMULAS.md">コスト計算式（docs/COST_FORMULAS.md）</a></li>
     <li><a href="#bugs">既知の挙動・バグ調査結果</a></li>
     <li><a href="#algorithms">アルゴリズム一覧</a></li>
@@ -391,6 +392,58 @@ nav.toc li { margin: 0.35rem 0; }
   <li>比較しているのが経路ジオメトリだけではないか（属性の <code>cost_on_graph</code> を比較）</li>
 </ul>
 
+<h2 id="fictional-road">架空道路を追加して計算する（NEO 1.0.23）</h2>
+
+<p>
+  例: 東京〜御殿場を計算すると通常は東名高速が選ばれるところを、
+  <strong>架空の道路を描き足してそちらを通らせたい</strong>場合の手順です。
+</p>
+
+<div class="callout callout-warn">
+  <strong>なぜ描いただけでは通らないのか</strong><br>
+  QGIS のネットワーク解析は、リンクの<strong>端点同士が一致する場所にしか接続を作りません</strong>。
+  道路の途中に突き当たる新規リンクや、端点がわずかにズレたリンクは、
+  グラフ上で孤立し、<strong>エラー無しで静かに無視されます</strong>（既存の高速道路が選ばれます）。
+</div>
+
+<h3>手順（描く → 前処理 → 計算）</h3>
+<ol class="steps">
+  <li>
+    既存ネットワークと架空道路を <strong>1 つの線レイヤ</strong>にまとめる。
+    接続したい場所には、架空道路の<strong>端点</strong>で突き当てる
+    （途中×途中の交差は接続になりません＝立体交差扱い）。
+  </li>
+  <li>
+    プロセスツールボックスで <strong>[NEO] ネットワーク前処理（接続・link_len）</strong> を実行。
+    <ul>
+      <li>他リンクの途中に近い端点 → そのリンクを分割してノード挿入＋端点吸着</li>
+      <li>端点のズレ → 許容差内で完全一致（スナップ）</li>
+      <li>未入力の <code>link_len</code> → 実測長で補完（既定 ON）</li>
+      <li>分割したリンクの <code>link_len</code> → 実測長の比率で按分（合計は保存）</li>
+      <li>ログに <strong>連結成分数</strong> と孤立リンク警告が出ます。1 成分なら全リンク到達可能です。</li>
+    </ul>
+  </li>
+  <li>
+    出力された「前処理済みネットワーク」を、最短経路・OD 行列・等時圏の
+    <strong>ネットワークレイヤ</strong>に指定して計算する。
+  </li>
+</ol>
+
+<div class="callout callout-ok">
+  <strong>経路が架空道路を通る条件</strong><br>
+  経路選択は<strong>最小コスト</strong>で決まります。通らせたい架空道路は
+  <code>link_len</code> を既存ルートより短めに（時間最適化なら速度を高めに）設定してください。
+  コスト的に不利な道路は（正しく）選ばれません。
+</div>
+
+<p>
+  <strong>出力ラインの形状（1.0.23〜）:</strong>
+  最短経路・OD 行列（ライン）の出力ラインは、通過したリンクの<strong>実形状</strong>をなぞります
+  （曲線で描いた架空道路も曲線のまま描画）。
+  リンク形状を特定できない辺は頂点間直線で描画し、件数をログに出力します。
+  コスト計算は従来通り <code>link_len</code> 系のみで、形状は数値に影響しません。
+</p>
+
 <h2 id="bugs">既知の挙動・バグ調査結果（NEO 1.0.10）</h2>
 
 <table class="gh-table">
@@ -445,6 +498,7 @@ nav.toc li { margin: 0.35rem 0; }
     <tr><th>グループ</th><th>例</th></tr>
   </thead>
   <tbody>
+    <tr><td>ネットワーク整備</td><td>ネットワーク前処理（接続・link_len）… <a href="#fictional-road">架空道路の接続</a></td></tr>
     <tr><td>経路</td><td>最短経路（点間）</td></tr>
     <tr><td>距離行列</td><td>OD 行列（表 / ライン / CSV）</td></tr>
     <tr><td>等時圏・到達圏</td><td>点クラウド、TIN 補間、等値線、ポリゴン</td></tr>

@@ -315,6 +315,84 @@ def check_link_len_parsers():
     return True
 
 
+def check_network_prep_core():
+    """前処理コア（純粋関数・QGIS 不要）の単体チェック。"""
+    parent = str(ROOT.parent)
+    if parent not in sys.path:
+        sys.path.insert(0, parent)
+    from QNEAT3.Qneat3NetworkPrep import (  # noqa: E402
+        apply_plan,
+        connected_components,
+        plan_endpoint_attachments,
+        prorate_value,
+        split_polyline,
+    )
+
+    parts = split_polyline([(0, 0), (10, 0)], [(0, 0.5)])
+    if parts != [[(0, 0), (5.0, 0.0)], [(5.0, 0.0), (10, 0)]]:
+        return _fail("split_polyline basic")
+
+    # T 字接続: branch の終点 (5, 0.5) が main の途中 0.5 に突き当たる
+    main = [(0, 0), (10, 0)]
+    branch = [(5, 3), (5, 0.5)]
+    lines = [main, branch]
+    cuts, snaps, _stats = plan_endpoint_attachments(lines, 1.0)
+    if 0 not in cuts:
+        return _fail("plan_endpoint_attachments: no cut on main link")
+    if snaps.get((1, 1)) != (5.0, 0.0):
+        return _fail("plan_endpoint_attachments: branch endpoint not snapped")
+
+    parts_per_line, snapped = apply_plan(lines, cuts, snaps)
+    if len(parts_per_line[0]) != 2:
+        return _fail("apply_plan: main link not split into 2 parts")
+
+    values = prorate_value(100.0, snapped[0], parts_per_line[0])
+    if abs(sum(values) - 100.0) > 1e-9 or abs(values[0] - 50.0) > 1e-9:
+        return _fail("prorate_value: total not preserved")
+
+    flat = [part for parts in parts_per_line for part in parts]
+    if len(connected_components(flat, 1.0)) != 1:
+        return _fail("connected_components: T junction should be connected")
+    if len(connected_components(flat + [[(100, 100), (200, 100)]], 1.0)) != 2:
+        return _fail("connected_components: isolated link not detected")
+
+    # セル境界またぎ（round 量子化では取りこぼすケース）
+    straddle = [[(0, 0), (4.5, 0)], [(5.5, 0), (10, 0)]]
+    if len(connected_components(straddle, 1.0)) != 1:
+        return _fail("connected_components: tolerance-edge straddle missed")
+
+    print("OK: network prep core (unit)")
+    return True
+
+
+def check_edge_geometry_index():
+    """エッジ形状索引（純粋関数・QGIS 不要）の単体チェック。"""
+    parent = str(ROOT.parent)
+    if parent not in sys.path:
+        sys.path.insert(0, parent)
+    from QNEAT3.Qneat3EdgeGeometryIndex import EdgeGeometryIndex  # noqa: E402
+
+    idx = EdgeGeometryIndex(0.0)
+    curved = [(0, 0), (5, 2), (10, 0)]
+    idx.add(curved, 100.0)
+    if idx.lookup((0, 0), (10, 0), 100.0) != curved:
+        return _fail("EdgeGeometryIndex: forward lookup")
+    if idx.lookup((10, 0), (0, 0), 100.0) != list(reversed(curved)):
+        return _fail("EdgeGeometryIndex: reverse lookup")
+    if idx.lookup((0, 0), (99, 99), 100.0) is not None:
+        return _fail("EdgeGeometryIndex: miss should return None")
+
+    idx2 = EdgeGeometryIndex(0.0)
+    idx2.add([(0, 0), (10, 0)], 50.0)
+    detour = [(0, 0), (0, 5), (10, 5), (10, 0)]
+    idx2.add(detour, 120.0)
+    if idx2.lookup((0, 0), (10, 0), 120.0) != detour:
+        return _fail("EdgeGeometryIndex: cost disambiguation")
+
+    print("OK: edge geometry index (unit)")
+    return True
+
+
 def check_classfactory_source():
     """__init__.py classFactory が存在し import パスが正しい。"""
     init_py = ROOT / "__init__.py"
@@ -339,6 +417,8 @@ def main():
         check_provider_algs_sync,
         check_classfactory_source,
         check_link_len_parsers,
+        check_network_prep_core,
+        check_edge_geometry_index,
         lambda: run_script("validate_metadata.py"),
         lambda: run_script("validate_uis_refs.py"),
         lambda: run_script("validate_network_errors.py"),

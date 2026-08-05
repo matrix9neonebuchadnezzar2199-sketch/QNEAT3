@@ -96,6 +96,19 @@ flowchart TD
     T --> SP[Qneat3LinkLengthTimeStrategy]
 ```
 
+## 5b. ネットワーク前処理・経路形状（1.0.23）
+
+| 部品 | 役割 | ファイル |
+|------|------|----------|
+| 前処理コア | 端点スナップ・リンク分割・link_len 按分・連結成分（純粋関数・QGIS 非依存） | `Qneat3NetworkPrep.py` |
+| 前処理アルゴリズム | QGIS 接着（実測長・属性・出力） | `algs/NetworkPrepareLinks.py` |
+| エッジ形状索引 | グラフ辺 → 元リンク形状（コスト照合で並行リンクを区別） | `Qneat3EdgeGeometryIndex.py` |
+| 経路復元 | 辺を実形状でなぎ、entry/exit は従来通り直線 | `Qneat3Utilities.reconstruct_path_geometry` |
+
+- 索引は `Qneat3Network.__init__` で構築（`net.edge_geometry_index`、コスト計算には不使用）
+- グリッド量子化は **floor**（`round` だと許容差ちょうどの 2 点が 2 セル離れ取りこぼす）
+- 形状を引けない辺は直線描画＋`LOG.PATH_GEOM_FALLBACK` で件数報告（静かな失敗を防ぐ）
+
 ## 6. 以前の監査で漏れた理由（再発防止）
 
 | 実施していたこと | 漏れていたこと |
@@ -122,10 +135,24 @@ flowchart TD
 ## 8. チェックコマンド
 
 ```powershell
-python H:\CURSOR\QNEAT3\scripts\validate_all_symbol_refs.py
-python H:\CURSOR\QNEAT3\scripts\validate_network_errors.py
-python H:\CURSOR\QNEAT3\scripts\verify_provider_register.py
-python H:\CURSOR\QNEAT3\scripts\validate_metadata.py
+cd H:\CURSOR\QNEAT3
+python TEST.py
 ```
 
+（内部で `validate_*`・`verify_provider_register`・構文/UTF-8/アイコン等を一括実行）
+
 すべて exit 0 のあと ZIP 作成。
+
+## 9. UI とオフネットワーク目的地（運用メモ）
+
+| UI（メイン） | 最適化基準 → 最短 / 最速 |
+| UI（高度） | リンク長フィールド（両モード必須・既定 `link_len`）、最速時は速度系 |
+
+**道路データが無い地点に目的地を置いた場合**
+
+1. `QgsVectorLayerDirector.makeGraph` が **全ネットワークから最寄り道路** に結線（即「データ無しエラー」ではない）
+2. 接続コスト（entry/exit）に **長い直線** が乗ることがある
+3. 始点側グラフと **非連結** なら: 2点最短 → `ERR.NO_PATH`、OD → コスト列 NULL
+4. カバー外拒否は未実装（別途空間チェック）
+
+AI 向け正本: `.cursor/rules/35-qneat3-neo.mdc`
