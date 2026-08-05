@@ -176,13 +176,11 @@ class LOG:
     PATH_COST_VALUES = (
         "[QNEAT3] コスト値: entry={entry:.4f} graph={graph:.4f} exit={exit:.4f} total={total:.4f}"
     )
-    PATH_GEOM_FALLBACK = (
-        "[QNEAT3] 経路描画: {count} 辺はリンク形状を特定できず"
-        "頂点間直線で描画しました（コスト計算には影響しません）。"
-    )
-
     # ネットワーク前処理
     PREP_READ = "[QNEAT3Prep] 入力: {features} フィーチャ → {parts} パート（マルチパート分解）"
+    PREP_DEGENERATE = (
+        "[QNEAT3Prep] 警告: ジオメトリが空・退化したフィーチャを {count} 件スキップしました。"
+    )
     PREP_FILLED = "[QNEAT3Prep] link_len を実測長で補完: {count} 件"
     PREP_SNAP_SPLIT = (
         "[QNEAT3Prep] 端点スナップ: {snaps} 件 / "

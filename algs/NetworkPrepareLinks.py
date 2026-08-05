@@ -144,10 +144,16 @@ class NetworkPrepareLinks(QgisAlgorithm):
         part_fids = []
         part_measured = []
         feature_count = 0
+        degenerate_count = 0
         for feature in source.getFeatures():
             feature_count += 1
             attrs = feature.attributes()
-            for pts in feature_geometry_part_tuples(feature):
+            parts = feature_geometry_part_tuples(feature)
+            if not parts:
+                # 空・退化ジオメトリは辺にならないためスキップ（静かに落とさない）
+                degenerate_count += 1
+                continue
+            for pts in parts:
                 lines.append(pts)
                 part_attrs.append(attrs)
                 part_fids.append(feature.id())
@@ -158,6 +164,8 @@ class NetworkPrepareLinks(QgisAlgorithm):
             feedback, LOG.PREP_READ,
             features=feature_count, parts=len(lines),
         )
+        if degenerate_count:
+            log_msg(feedback, LOG.PREP_DEGENERATE, count=degenerate_count)
         feedback.setProgress(20)
 
         # link_len の確定（未入力・不正は任意で実測長に補完。0 以下は受理しない）

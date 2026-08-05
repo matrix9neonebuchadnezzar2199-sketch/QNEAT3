@@ -237,7 +237,6 @@ class OdMatrixFromLayersAsLines(QgisAlgorithm):
         
         current_workstep_number = 0
         pairs_ok = 0
-        geom_fallback_total = 0
 
         for start_point in list_from_apoints:
             #optimize in case of undirected (not necessary to call calcDijkstra as it has already been calculated - can be replaced by reading from list)
@@ -263,16 +262,14 @@ class OdMatrixFromLayersAsLines(QgisAlgorithm):
                     total_cost = network_cost + entry_cost + exit_cost
                     
                     if matrix_geometry_type != 0:
-                        route, geom_fallbacks = reconstruct_path_geometry(
+                        route = reconstruct_path_geometry(
                             net.network,
                             dijkstra_query[0],
                             start_point.network_vertex_id,
                             query_point.network_vertex_id,
                             start_point.point_geom,
                             query_point.point_geom,
-                            net.edge_geometry_index,
                         )
-                        geom_fallback_total += geom_fallbacks
                         if route is None:
                             feat.setGeometry(QgsGeometry())
                         else:
@@ -295,8 +292,6 @@ class OdMatrixFromLayersAsLines(QgisAlgorithm):
                 feedback.setProgress((current_workstep_number/total_workload)*100)
                     
         log_msg(feedback, LOG.OD_TOTAL, n=current_workstep_number)
-        if geom_fallback_total:
-            log_msg(feedback, LOG.PATH_GEOM_FALLBACK, count=geom_fallback_total)
         log_od_run_footer(
             feedback, net.strategy_int, pairs_ok, int(total_workload)
         )

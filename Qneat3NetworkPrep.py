@@ -125,6 +125,25 @@ def _bbox_distance_to_point(bbox, p):
     return (dx * dx + dy * dy) ** 0.5
 
 
+def _bbox_grid_index(bboxes, tol, cell_size):
+    """
+    ライン bbox のグリッド索引（tol 拡張 bbox を覆うセルに登録）。
+
+    照会側は点のセル 1 つを引くだけで「tol 以内になりうる」候補を網羅できる
+    （拡張 bbox が点のセルを必ず覆うため取りこぼしなし）。
+    """
+    grid = {}
+    for j, b in enumerate(bboxes):
+        x0 = math.floor((b[0] - tol) / cell_size)
+        x1 = math.floor((b[2] + tol) / cell_size)
+        y0 = math.floor((b[1] - tol) / cell_size)
+        y1 = math.floor((b[3] + tol) / cell_size)
+        for cx in range(x0, x1 + 1):
+            for cy in range(y0, y1 + 1):
+                grid.setdefault((cx, cy), set()).add(j)
+    return grid
+
+
 def plan_endpoint_attachments(lines, tol):
     """
     端点の接続計画を立てる（計画は常に元ジオメトリ基準。適用は apply_plan）。
@@ -132,6 +151,9 @@ def plan_endpoint_attachments(lines, tol):
     各ラインの両端点について、他ラインとの関係を許容差 tol で判定:
     - 他ラインの途中に近い → そのラインに分割カットを記録し、端点は射影点に吸着
     - 他ラインの端点に近い → 端点をその端点座標に吸着（分割なし）
+
+    候補探索は bbox グリッド索引（セル幅 = ライン bbox 最大辺の中央値）。
+    全リンク総当たりでは大規模ネットワークで破綻するため索引化している。
 
     Args:
         lines: ポリラインのリスト（各要素は (x, y) のリスト）。
@@ -149,13 +171,30 @@ def plan_endpoint_attachments(lines, tol):
     n_snaps = 0
     n_split_events = 0
 
+    # セル幅の自動推定: bbox 最大辺の中央値（下限は tol）
+    spans = sorted(
+        max(b[2] - b[0], b[3] - b[1]) for b in bboxes if b != (0, 0, 0, 0)
+    )
+    if spans:
+        cell_size = max(spans[len(spans) // 2], tol, 1e-9)
+    else:
+        cell_size = max(tol, 1e-9)
+    grid = _bbox_grid_index(bboxes, tol, cell_size)
+
     for i, pts in enumerate(lines):
         if len(pts) < 2:
             continue
         for end_idx, p in ((0, pts[0]), (1, pts[-1])):
+            cell = (
+                math.floor(p[0] / cell_size),
+                math.floor(p[1] / cell_size),
+            )
             best = None  # (d, j, seg, t, proj, j_end)
-            for j, other in enumerate(lines):
-                if j == i or len(other) < 2:
+            for j in grid.get(cell, ()):
+                if j == i:
+                    continue
+                other = lines[j]
+                if len(other) < 2:
                     continue
                 if _bbox_distance_to_point(bboxes[j], p) > tol:
                     continue

@@ -79,10 +79,12 @@ flowchart LR
 
 | 要素 | strategy=0 最短距離 | strategy=1 最速 |
 |------|---------------------|-----------------|
-| グラフ辺コスト | `Qneat3LinkLengthStrategy`（link_len） | `Qneat3LinkLengthTimeStrategy`（link_len÷速度） |
+| グラフ辺コスト | `Qneat3LinkLengthStrategy`（link_len × d_seg/L_link） | `Qneat3LinkLengthTimeStrategy`（link_len × d_seg/L_link ÷ 速度） |
 | 速度フィールド | **未使用** | 使用（無効時はデフォルト速度） |
 | デフォルト速度 | **未使用**（0 可） | **必須**（正の km/h、接続コストにも使用） |
 | 接続コスト（entry/exit） | **距離**（m） | 実測直線距離÷速度（時間） |
+
+**グラフ辺はセグメント単位**: `QgsVectorLayerDirector` はポリラインをセグメント（頂点→頂点）ごとの辺に分割する。`link_len` はフィーチャ全体の値のため、戦略は `distance / フィーチャ全長`（同一計測: ソース CRS + WGS84 楕円体）で按分する。按分しないとセグメント数で重複課金される（1.0.23 初期の障害）。
 
 式の詳細: [COST_FORMULAS.md](COST_FORMULAS.md)
 
@@ -100,14 +102,12 @@ flowchart TD
 
 | 部品 | 役割 | ファイル |
 |------|------|----------|
-| 前処理コア | 端点スナップ・リンク分割・link_len 按分・連結成分（純粋関数・QGIS 非依存） | `Qneat3NetworkPrep.py` |
-| 前処理アルゴリズム | QGIS 接着（実測長・属性・出力） | `algs/NetworkPrepareLinks.py` |
-| エッジ形状索引 | グラフ辺 → 元リンク形状（コスト照合で並行リンクを区別） | `Qneat3EdgeGeometryIndex.py` |
-| 経路復元 | 辺を実形状でなぎ、entry/exit は従来通り直線 | `Qneat3Utilities.reconstruct_path_geometry` |
+| 前処理コア | 端点スナップ・リンク分割・link_len 按分・連結成分（純粋関数・QGIS 非依存、bbox グリッド索引で大規模対応） | `Qneat3NetworkPrep.py` |
+| 前処理アルゴリズム | QGIS 接着（実測長・属性・出力・退化フィーチャは件数警告） | `algs/NetworkPrepareLinks.py` |
+| 経路復元 | 木の頂点チェーンを継ぐ（セグメント辺＝実形状と厳密一致） | `Qneat3Utilities.reconstruct_path_geometry` |
 
-- 索引は `Qneat3Network.__init__` で構築（`net.edge_geometry_index`、コスト計算には不使用）
 - グリッド量子化は **floor**（`round` だと許容差ちょうどの 2 点が 2 セル離れ取りこぼす）
-- 形状を引けない辺は直線描画＋`LOG.PATH_GEOM_FALLBACK` で件数報告（静かな失敗を防ぐ）
+- 形状索引（`Qneat3EdgeGeometryIndex`）は 1.0.23 初期に導入したが、グラフ辺がセグメント単位のため頂点チェーンと等価と判明し削除
 
 ## 6. 以前の監査で漏れた理由（再発防止）
 

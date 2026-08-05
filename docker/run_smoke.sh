@@ -2,6 +2,7 @@
 # QGIS検証スモークランナー（コンテナ内で実行）
 # 1) Provider 登録確認 2) ネットワーク前処理 3) 出力検証
 # 4) 最短経路（距離） 5) 最短経路（時間・速度フィールド） 6) OD 行列（ライン）
+# 7) セグメント按分（距離） 8) セグメント按分（時間）
 set -euo pipefail
 export QT_QPA_PLATFORM=offscreen
 
@@ -75,5 +76,37 @@ qgis_process run qneat3:OdMatrixFromPointsAsLines \
   --LINK_LENGTH_FIELD=link_len \
   --OUTPUT="$OUT/od.geojson"
 python3 "$CHECKS/check_od.py" "$OUT/od.geojson" A B 2800
+
+echo "== [7/8] segment proration (distance, unprepared curved link) =="
+# 1 フィーチャ 2 セグメントの曲線リンク。link_len=5000 がセグメント数で
+# 重複課金されないこと（修正前は 10000 になる）
+qgis_process run qneat3:shortestpathpointtopoint \
+  --INPUT="$TESTDATA/network2.geojson" \
+  --START_POINT="0,0 [EPSG:3857]" \
+  --END_POINT="1000,0 [EPSG:3857]" \
+  --STRATEGY=0 \
+  --ENTRY_COST_CALCULATION_METHOD=0 \
+  --DEFAULT_DIRECTION=2 \
+  --DEFAULT_SPEED=50 \
+  --TOLERANCE=0 \
+  --LINK_LENGTH_FIELD=link_len \
+  --OUTPUT="$OUT/route2.geojson"
+python3 "$CHECKS/check_route.py" "$OUT/route2.geojson" 5000
+
+echo "== [8/8] segment proration (time, same link @50km/h) =="
+# 5000 m / (50 km/h) = 360 s（修正前は 720 s）
+qgis_process run qneat3:shortestpathpointtopoint \
+  --INPUT="$TESTDATA/network2.geojson" \
+  --START_POINT="0,0 [EPSG:3857]" \
+  --END_POINT="1000,0 [EPSG:3857]" \
+  --STRATEGY=1 \
+  --ENTRY_COST_CALCULATION_METHOD=0 \
+  --DEFAULT_DIRECTION=2 \
+  --SPEED_FIELD=speed \
+  --DEFAULT_SPEED=50 \
+  --TOLERANCE=0 \
+  --LINK_LENGTH_FIELD=link_len \
+  --OUTPUT="$OUT/route2_time.geojson"
+python3 "$CHECKS/check_route.py" "$OUT/route2_time.geojson" 360
 
 echo "SMOKE PASS"

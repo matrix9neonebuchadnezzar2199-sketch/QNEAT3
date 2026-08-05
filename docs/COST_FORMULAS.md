@@ -11,20 +11,22 @@
 | `v` | 速度 [km/h]（速度フィールド、無効時はデフォルト速度） |
 | `v_mps` | `v × 1000 / 3600` [m/s] |
 
-**共通:** グラフ構築時に QGIS が渡すエッジ部分の形状長 `distance` は **どちらのモードでもコストに使わない**。
+**共通:** QGIS の `QgsVectorLayerDirector` はポリラインを**セグメント（頂点→頂点）ごとの辺**に分割してグラフを構築し、セグメント辺ごとに `cost(distance, feature)` を呼ぶ（`distance` = セグメントの実測長）。`link_len` はフィーチャ全体の値なので、**セグメント長の比率で按分**する（按分しないとセグメント数だけ重複課金される — 1.0.23 初期の障害の原因）。
+
+按分の全長 `L_link` はビルダと同条件（ソース CRS + WGS84 楕円体）で計測し、Σ `c_e` over 1 リンク = `link_len` を厳密に満たす。
 
 ## 距離最適化（strategy = 0）
 
 | 要素 | 式 | 単位 |
 |------|-----|------|
-| グラフ辺 `c_e` | `link_len` | m |
+| グラフ辺（セグメント）`c_e` | `link_len × (d_seg / L_link)` | m |
 | 接続 `c_entry`, `c_exit` | `d_実測` | m |
-| 合計 `C` | `c_entry + Σ c_e + c_exit` | m |
+| 合計 `C` | `c_entry + Σ c_e + c_exit`（Σ c_e over 1 リンク = link_len） | m |
 
 ```mermaid
 flowchart LR
-  subgraph edge [グラフ辺]
-    E["c_e = link_len"]
+  subgraph edge [グラフ辺（セグメント）]
+    E["c_e = link_len × (d_seg / L_link)"]
   end
   subgraph conn [接続]
     EN["c_entry = d_実測"]
@@ -42,14 +44,14 @@ flowchart LR
 
 | 要素 | 式 | 単位 |
 |------|-----|------|
-| グラフ辺 `c_e` | `link_len / v_mps` | s |
+| グラフ辺（セグメント）`c_e` | `link_len × (d_seg / L_link) / v_mps` | s |
 | 接続 `c_entry`, `c_exit` | `d_実測 / v_mps_default` | s |
 | 合計 `C` | `c_entry + Σ c_e + c_exit` | s |
 
 ```mermaid
 flowchart LR
-  subgraph edge [グラフ辺]
-    E["c_e = link_len / v_mps"]
+  subgraph edge [グラフ辺（セグメント）]
+    E["c_e = link_len × (d_seg / L_link) / v_mps"]
   end
   subgraph conn [接続]
     EN["c_entry = d_実測 / v_mps_default"]
@@ -70,16 +72,14 @@ flowchart LR
 | 0 | `Qneat3LinkLengthStrategy` | `Qneat3LinkLengthStrategy.py` |
 | 1 | `Qneat3LinkLengthTimeStrategy` | `Qneat3LinkLengthTimeStrategy.py` |
 
-## 経路ラインの形状（1.0.23〜）
+## 経路ラインの形状
 
-出力ラインジオメトリは通過リンクの**実形状**をなぞる（`reconstruct_path_geometry` + `EdgeGeometryIndex`）。
+出力ラインジオメトリは Dijkstra 木の頂点チェーン（`reconstruct_path_geometry`）。
+QGIS のグラフ辺はポリラインのセグメント（頂点→頂点）なので、頂点チェーンは
+通過リンクの**実形状と厳密に一致**する（曲線リンクもそのまま描画）。
+entry/exit（点↔最寄り頂点）は従来通り直線。
 
-- グラフ辺の両端頂点座標から元リンク形状を引き、向きを通過方向に合わせて継ぐ
-- 継ぎ目の両端はグラフ頂点座標に合わせる（連続性保証）
-- リンク形状を特定できない辺は頂点間直線にフォールバックし、件数をログ出力（`PATH_GEOM_FALLBACK`）
-- entry/exit（点↔最寄り頂点）は従来通り直線
-
-**数値コストの算出にジオメトリは使わない**（コストは引き続き link_len 系のみ）。
+**数値コストの算出に出力ジオメトリは使わない**（コストは link_len 系属性のみ）。
 
 ## ネットワーク前処理（NetworkPrepareLinks、1.0.23〜）
 

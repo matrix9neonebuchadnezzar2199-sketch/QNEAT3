@@ -156,64 +156,43 @@ def reconstruct_path_geometry(
     end_vertex_id,
     start_point_geom,
     end_point_geom,
-    geom_index=None,
 ):
     """
     Dijkstra 木から始点→終点の経路（QgsPointXY のリスト）を構築する。
 
-    geom_index（EdgeGeometryIndex）があれば各グラフ辺を元リンク形状でなぞる。
-    見つからない辺は従来通り頂点間の直線にフォールバックする。
-    entry/exit（点↔最寄り頂点）は設計通り直線のまま。
+    QGIS のグラフ辺はポリラインのセグメント（頂点→頂点）なので、
+    辺を頂点順に継ぐだけで元リンクの形状と厳密に一致する。
+    entry/exit（点↔最寄り頂点）は設計通り直線。
 
     Returns:
-        tuple: (list[QgsPointXY] | None, int) — (経路, 直線フォールバックした辺数)。
-        到達不能時は (None, 0)。
+        list[QgsPointXY] | None: 到達不能時は None。
     """
     if tree[end_vertex_id] == -1:
-        return None, 0
+        return None
     if start_vertex_id == end_vertex_id:
-        return [start_point_geom, end_point_geom], 0
+        return [start_point_geom, end_point_geom]
 
-    # 終点→始点へ木を遡り、(edge_id, from_vid, to_vid) を始点→終点順に並べる
-    hops = []
+    path = [end_point_geom, network.vertex(end_vertex_id).point()]
     current = end_vertex_id
     max_hops = network.vertexCount() + 2
+
     for _ in range(max_hops):
         if current == start_vertex_id:
             break
         edge_id = tree[current]
         if edge_id < 0:
-            return None, 0
+            return None
         previous = predecessor_vertex_on_tree(network, edge_id, current)
         if previous < 0:
-            return None, 0
-        hops.append((edge_id, previous, current))
+            return None
         current = previous
+        path.append(network.vertex(current).point())
     else:
-        return None, 0
-    hops.reverse()
+        return None
 
-    points = [start_point_geom]
-    fallback_count = 0
-    for edge_id, from_vid, to_vid in hops:
-        a = network.vertex(from_vid).point()
-        b = network.vertex(to_vid).point()
-        seg = None
-        if geom_index is not None:
-            seg = geom_index.lookup(
-                (a.x(), a.y()), (b.x(), b.y()), network.edge(edge_id).cost(0)
-            )
-        if seg is None:
-            if geom_index is not None:
-                fallback_count += 1
-            seg = [(a.x(), a.y()), (b.x(), b.y())]
-        else:
-            # 継ぎ目の連続性を保証するため両端はグラフ頂点座標に合わせる
-            seg[0] = (a.x(), a.y())
-            seg[-1] = (b.x(), b.y())
-        points.extend(QgsPointXY(x, y) for x, y in seg[1:])
-    points.append(end_point_geom)
-    return points, fallback_count
+    path.append(start_point_geom)
+    path.reverse()
+    return path
         
 def getFieldDatatype(qgs_feature_storage, fieldname):
     fields_list = qgs_feature_storage.fields()

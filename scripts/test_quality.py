@@ -365,34 +365,6 @@ def check_network_prep_core():
     return True
 
 
-def check_edge_geometry_index():
-    """エッジ形状索引（純粋関数・QGIS 不要）の単体チェック。"""
-    parent = str(ROOT.parent)
-    if parent not in sys.path:
-        sys.path.insert(0, parent)
-    from QNEAT3.Qneat3EdgeGeometryIndex import EdgeGeometryIndex  # noqa: E402
-
-    idx = EdgeGeometryIndex(0.0)
-    curved = [(0, 0), (5, 2), (10, 0)]
-    idx.add(curved, 100.0)
-    if idx.lookup((0, 0), (10, 0), 100.0) != curved:
-        return _fail("EdgeGeometryIndex: forward lookup")
-    if idx.lookup((10, 0), (0, 0), 100.0) != list(reversed(curved)):
-        return _fail("EdgeGeometryIndex: reverse lookup")
-    if idx.lookup((0, 0), (99, 99), 100.0) is not None:
-        return _fail("EdgeGeometryIndex: miss should return None")
-
-    idx2 = EdgeGeometryIndex(0.0)
-    idx2.add([(0, 0), (10, 0)], 50.0)
-    detour = [(0, 0), (0, 5), (10, 5), (10, 0)]
-    idx2.add(detour, 120.0)
-    if idx2.lookup((0, 0), (10, 0), 120.0) != detour:
-        return _fail("EdgeGeometryIndex: cost disambiguation")
-
-    print("OK: edge geometry index (unit)")
-    return True
-
-
 def check_classfactory_source():
     """__init__.py classFactory が存在し import パスが正しい。"""
     init_py = ROOT / "__init__.py"
@@ -418,7 +390,6 @@ def main():
         check_classfactory_source,
         check_link_len_parsers,
         check_network_prep_core,
-        check_edge_geometry_index,
         lambda: run_script("validate_metadata.py"),
         lambda: run_script("validate_uis_refs.py"),
         lambda: run_script("validate_network_errors.py"),
