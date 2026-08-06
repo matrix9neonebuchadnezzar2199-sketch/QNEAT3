@@ -7,8 +7,9 @@
 ## クイックメモ
 
 - 配置先フォルダ名: **`QNEAT3`**（`plugins\QNEAT3\`）
-- 距離最適化: エッジコスト = **`link_len`** [m]（全リンク必須）
-- 時間最適化: エッジコスト = **`link_len` ÷ 速度** [s]（形状長は未使用）
+- 距離最適化: エッジコスト = **`link_len` × (セグメント長/リンク全長)** [m]（全リンク必須、リンク合計 = link_len）
+- 時間最適化: 上記按分 **÷ 速度** [s]（形状長は未使用）
+- 点座標: 経緯度はそのまま入力可（みなし変換・1.0.24）
 - 計算式: [docs/COST_FORMULAS.md](docs/COST_FORMULAS.md)
 - リポジトリ: https://github.com/matrix9neonebuchadnezzar2199-sketch/QNEAT3
 
@@ -25,6 +26,13 @@ python TEST.py
 ```
 
 構文・UTF-8・シンボル参照・アイコン存在・Provider 登録・link_len パーサ単体テストを一括実行します。
+
+コンテナ実機スモーク（「QGIS検証」、`docker/README.md`）:
+
+```powershell
+docker build -f docker/Dockerfile -t qgis-neo-verify:latest .
+docker run --rm -v "${PWD}\docker\out:/out" qgis-neo-verify:latest
+```
 
 ## 検証手順（STEPS）
 

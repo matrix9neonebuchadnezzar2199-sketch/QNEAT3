@@ -153,6 +153,7 @@ nav.toc li { margin: 0.35rem 0; }
     <li><a href="#install">導入方法（初心者向け）</a></li>
     <li><a href="#prepare">実行前のデータ準備</a></li>
     <li><a href="#usage">基本的な使い方</a></li>
+    <li><a href="#point-crs">始点・終点の座標入力（CRS）</a></li>
     <li><a href="#verify-steps">検証手順（STEPS）</a></li>
     <li><a href="#distance-time">最短距離と最短時間の違い</a></li>
     <li><a href="#fictional-road">架空道路を追加して計算する</a></li>
@@ -258,6 +259,38 @@ nav.toc li { margin: 0.35rem 0; }
   <li>実行。ログに <code>コストモード: …</code> が出るので戦略を確認。</li>
 </ol>
 
+<h3 id="point-crs">始点・終点の座標入力（NEO 1.0.24）</h3>
+
+<table class="gh-table">
+  <thead>
+    <tr><th>入力方法</th><th>扱い</th></tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>138.920116,35.111750</code> のように度の範囲の数値</td>
+      <td>投影 CRS のレイヤでは<strong>経緯度 (EPSG:4326) とみなして自動変換</strong>されます（ログに明示）。そのまま入力して構いません</td>
+    </tr>
+    <tr>
+      <td><code>138.920116,35.111750 [EPSG:4326]</code> のように CRS 接尾辞つき</td>
+      <td>指定 CRS からレイヤ CRS に変換（最も明示的・推奨）</td>
+    </tr>
+    <tr>
+      <td>地図キャンバスをクリック</td>
+      <td>プロジェクト CRS の座標として取得（レイヤと同じ CRS の地図なら問題なし）</td>
+    </tr>
+    <tr>
+      <td>OD 行列のポイントレイヤ</td>
+      <td><strong>みなし変換はありません</strong>。点レイヤは事前にネットワークと同じ CRS に変換しておいてください</td>
+    </tr>
+  </tbody>
+</table>
+
+<div class="callout callout-warn">
+  <strong>CRS 指定を誤ると:</strong>
+  両点が遠く離れた同一頂点に結線され「始点と終点が同じネットワーク頂点に結線されました」というエラーになります
+  （以前は汎用の「経路が見つかりません」でした）。座標の形式を見直してください。
+</div>
+
 <div class="callout callout-ok">
   <strong>更新確認</strong>は下記 <a href="#verify-steps">検証手順（STEPS）</a> を参照してください。
 </div>
@@ -280,9 +313,9 @@ nav.toc li { margin: 0.35rem 0; }
   </li>
   <li>
     プロバイダ一覧で名前が
-    <code>QNEAT3 (1.0.16, 20260530-cleanup)</code>
+    <code>QNEAT3 (1.0.24, 20260806-lonlat-crs)</code>
     のように <strong>バージョンとビルド ID</strong> 付きになっていることを確認する。
-    <br>古い表示の場合は、別フォルダのプラグインが読み込まれている可能性があります。
+    <br>古い表示の場合は、別フォルダのプラグインが読み込まれている可能性があります（QGIS 未再起動で metadata だけ新しく読まれる混在表示もありえます）。
   </li>
   <li>
     任意のアルゴリズム（例: <strong>最短経路（点間）</strong>）を実行し、ログに
@@ -463,6 +496,16 @@ nav.toc li { margin: 0.35rem 0; }
       <td>1.0.23 で <code>link_len × (d_seg / L_link)</code> 按分に修正</td>
     </tr>
     <tr>
+      <td>修正済</td>
+      <td>座標を CRS 指定なしで入力 → レイヤ CRS（メートル）と誤解釈され、両点が同一の誤頂点に結線 → NO_PATH</td>
+      <td>1.0.24 で経緯度みなし変換＋同一頂点の専用エラー（CRS 案内つき）＋遠距離接続の警告</td>
+    </tr>
+    <tr>
+      <td>修正済</td>
+      <td>GUI が方向フィールドを自動入力し、空の照合値に空属性がマッチして一方通行化しうる</td>
+      <td>1.0.24 で照合値が未設定なら方向フィールドを無視するガード</td>
+    </tr>
+    <tr>
       <td>—</td>
       <td>距離／時間で同一戦略になるバグ</td>
       <td><strong>再現せず</strong>（設計上は別 Strategy）</td>
@@ -583,7 +626,7 @@ nav.toc li { margin: 0.35rem 0; }
 
 <div class="callout callout-warn">
   <strong>NEO 版の目印:</strong> 一覧の表示名が <code>QNEAT3 NEO</code>、
-  処理プロバイダが <code>QNEAT3 (1.0.16, 20260530-cleanup)</code> のようにバージョン付きであること。
+  処理プロバイダが <code>QNEAT3 (1.0.24, 20260806-lonlat-crs)</code> のようにバージョン付きであること。
 </div>
 
 <h2 id="trouble">トラブルシューティング</h2>
