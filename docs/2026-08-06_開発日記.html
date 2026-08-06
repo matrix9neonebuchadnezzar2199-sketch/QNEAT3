@@ -85,6 +85,13 @@ footer.gh-footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid va
         <td><span class="gh-label gh-label-ok">ok</span></td>
         <td><a href="#entry-1424">詳細</a></td>
       </tr>
+      <tr>
+        <td>14:30</td>
+        <td>リリース 1.0.24（version / BUILD_ID / ZIP 再作成）</td>
+        <td><span class="gh-label gh-label-type">release</span></td>
+        <td><span class="gh-label gh-label-ok">ok</span></td>
+        <td><a href="#entry-1430">詳細</a></td>
+      </tr>
     </tbody>
   </table>
 </section>
@@ -97,7 +104,7 @@ footer.gh-footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid va
       <span class="gh-label gh-label-type">incident</span>
       <span class="gh-label gh-label-scope">tool</span>
       <time datetime="2026-08-06T14:24">14:24</time>
-      <span class="commit-hash pending">pending</span>
+      <span class="commit-hash">db56e9c</span>
     </div>
 
     <h3>背景</h3>
@@ -172,6 +179,32 @@ footer.gh-footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid va
     <ul>
       <li>OD 行列（ポイントレイヤ入力）はレイヤ CRS 前提のみなし変換なし — 点レイヤは事前にネットワークと同じ CRS に変換する運用を README に明記する</li>
     </ul>
+  </section>
+
+  <section class="gh-entry entry" id="entry-1430">
+    <h2>リリース 1.0.24</h2>
+    <div class="gh-entry-meta">
+      <span class="gh-label gh-label-type">release</span>
+      <span class="gh-label gh-label-scope">tool</span>
+      <time datetime="2026-08-06T14:30">14:30</time>
+      <span class="commit-hash pending">pending</span>
+    </div>
+    <h3>概要</h3>
+    <p class="lead">前項の UX 修正（経緯度みなし変換・同一頂点エラー・遠距離警告・方向ガード）を 1.0.24 としてリリース。</p>
+    <h3>変更点</h3>
+    <ul class="diff-list">
+      <li class="diff-mod"><span class="diff-mark">M</span> metadata.txt（version=1.0.24、changelog 更新）</li>
+      <li class="diff-mod"><span class="diff-mark">M</span> Qneat3BuildInfo.py（BUILD_ID 20260806-lonlat-crs）</li>
+    </ul>
+    <h3>検証</h3>
+    <table class="gh-table">
+      <thead><tr><th>項目</th><th>方法</th><th>結果</th></tr></thead>
+      <tbody>
+        <tr><td>品質ゲート</td><td>TEST.py</td><td>PASS</td></tr>
+        <tr><td>ZIP</td><td>pack_plugin_zip.ps1</td><td>dist/QNEAT3-neo-1.0.24.zip</td></tr>
+        <tr><td>ローカル導入</td><td>deploy_to_qgis_plugins.ps1</td><td>OK</td></tr>
+      </tbody>
+    </table>
   </section>
 
 </main>

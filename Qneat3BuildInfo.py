@@ -6,7 +6,7 @@ import os
 from QNEAT3.Qneat3Paths import plugin_root
 
 # 機能変更のたびに更新（プロバイダ名の区別に使う）
-BUILD_ID = "20260805-segment-proration"
+BUILD_ID = "20260806-lonlat-crs"
 NEO_LINK_LEN_FEATURE = True
 
 
