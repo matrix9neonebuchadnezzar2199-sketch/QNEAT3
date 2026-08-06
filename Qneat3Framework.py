@@ -109,13 +109,17 @@ class Qneat3Network():
 
         #init direction fields
         log_msg(self.feedback, LOG.NET_DIRECTION)
+
         self.setNetworkDirection(
-            (
-                input_directionFieldName,
-                input_forwardValue,
-                input_backwardValue,
-                input_bothValue,
-                input_defaultDirection,
+            tuple(
+                v if v is not None else ""
+                for v in (
+                    input_directionFieldName,
+                    input_forwardValue,
+                    input_backwardValue,
+                    input_bothValue,
+                    input_defaultDirection,
+                )
             )
         )
         #parameterAsEnum は int を返す。Qt6/SIP6 系の QGIS では
@@ -129,8 +133,17 @@ class Qneat3Network():
             )
             input_defaultDirection = direction_enums[input_defaultDirection]
 
+        #方向フィールドは「順/逆/双方向の値がすべて設定済み」の場合のみ有効。
+        #照合値が空ならフィールド指定を無視する（GUI がフィールドを自動入力し、
+        #空照合値に空属性がマッチして一方通行化 → NO_PATH となる問題の対策）
+        direction_field_id = -1
+        if self.directedAnalysis:
+            direction_field_id = getFieldIndexFromQgsProcessingFeatureSource(
+                input_network, input_directionFieldName
+            )
+
         self.director = QgsVectorLayerDirector(input_network,
-                                    getFieldIndexFromQgsProcessingFeatureSource(input_network, input_directionFieldName),
+                                    direction_field_id,
                                     input_forwardValue,
                                     input_backwardValue,
                                     input_bothValue,

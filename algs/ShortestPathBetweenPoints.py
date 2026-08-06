@@ -36,7 +36,10 @@ from qgis.core import (QgsWkbTypes,
                        QgsProcessingParameterEnum,
                        QgsProcessingParameterPoint,
                        QgsProcessingParameterFeatureSource,
-                       QgsProcessingParameterFeatureSink)
+                       QgsProcessingParameterFeatureSink,
+                       QgsProject,
+                       QgsCoordinateReferenceSystem,
+                       QgsCoordinateTransform)
 
 from QNEAT3.Qneat3Framework import Qneat3Network, Qneat3AnalysisPoint
 from QNEAT3.Qneat3Utilities import getFeatureFromPointParameter, reconstruct_path_geometry
@@ -57,6 +60,32 @@ from QNEAT3.Qneat3ProcessingParams import (
 
 from QNEAT3.Qneat3Paths import icon_path
 from processing.algs.qgis.QgisAlgorithm import QgisAlgorithm
+
+
+def _coerce_lonlat_point(point, target_crs, point_label, feedback):
+    """
+    度の範囲の座標を経緯度とみなしてレイヤ CRS に変換する。
+
+    投影 CRS のレイヤに対し、CRS 接尾辞なしで経緯度が入力されると
+    メートル座標と誤解釈され同一頂点への結線・NO_PATH の原因になる。
+    |x|<=180 かつ |y|<=90 の場合は経緯度とみなして変換し、明示ログを出す。
+    変換対象外の点はそのまま返す。
+    """
+    if target_crs.isGeographic():
+        return point
+    if abs(point.x()) > 180.0 or abs(point.y()) > 90.0:
+        return point
+    xform = QgsCoordinateTransform(
+        QgsCoordinateReferenceSystem("EPSG:4326"),
+        target_crs,
+        QgsProject.instance(),
+    )
+    converted = xform.transform(point)
+    log_msg(
+        feedback, LOG.POINT_ASSUMED_LONLAT,
+        label=point_label, x=round(point.x(), 6), y=round(point.y(), 6),
+    )
+    return converted
 
 
 class ShortestPathBetweenPoints(QgisAlgorithm):
@@ -125,10 +154,16 @@ class ShortestPathBetweenPoints(QgisAlgorithm):
         log_msg(feedback, LOG.ALG_INIT)
 
         network = self.parameterAsSource(parameters, self.INPUT, context)
-        startPoint = self.parameterAsPoint(
-            parameters, self.START_POINT, context, network.sourceCrs())
-        endPoint = self.parameterAsPoint(
-            parameters, self.END_POINT, context, network.sourceCrs())
+        startPoint = _coerce_lonlat_point(
+            self.parameterAsPoint(
+                parameters, self.START_POINT, context, network.sourceCrs()),
+            network.sourceCrs(), "始点", feedback,
+        )
+        endPoint = _coerce_lonlat_point(
+            self.parameterAsPoint(
+                parameters, self.END_POINT, context, network.sourceCrs()),
+            network.sourceCrs(), "終点", feedback,
+        )
         strategy = self.parameterAsEnum(parameters, self.STRATEGY, context)
 
         entry_cost_calc_method = self.parameterAsEnum(
@@ -171,6 +206,16 @@ class ShortestPathBetweenPoints(QgisAlgorithm):
 
         start_vertex_idx = list_analysis_points[0].network_vertex_id
         end_vertex_idx = list_analysis_points[1].network_vertex_id
+
+        # 結線の健全性チェック（CRS 誤解釈の早期検出）
+        # 同一頂点への結線は NO_PATH の典型原因（座標がレイヤ CRS に誤解釈された場合等）
+        if start_vertex_idx == end_vertex_idx:
+            raise QgsProcessingException(ja(ERR.SAME_TIE_VERTEX))
+        for analysis_point in list_analysis_points:
+            tie_dist = analysis_point.calcEntryLinestring().length()
+            # 投影 CRS を想定した閾値（100 km 超の接続は CRS 指定ミスを疑う）
+            if tie_dist > 100000:
+                log_msg(feedback, LOG.TIE_FAR_WARNING, dist=tie_dist)
 
         log_msg(feedback, LOG.PATH_CALC)
         feedback.setProgress(50)

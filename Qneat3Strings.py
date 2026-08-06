@@ -176,6 +176,15 @@ class LOG:
     PATH_COST_VALUES = (
         "[QNEAT3] コスト値: entry={entry:.4f} graph={graph:.4f} exit={exit:.4f} total={total:.4f}"
     )
+    TIE_FAR_WARNING = (
+        "[QNEAT3] 警告: 点がネットワークから {dist:,.0f} 離れています。"
+        "座標の CRS 指定（例: `経度,緯度 [EPSG:4326]`）を確認してください。"
+    )
+    POINT_ASSUMED_LONLAT = (
+        "[QNEAT3] {label}の座標 ({x}, {y}) は投影 CRS のレイヤに対し度の範囲です。"
+        "経緯度 (EPSG:4326) とみなしてレイヤ CRS に変換しました"
+        "（明示するには `経度,緯度 [EPSG:4326]` と入力してください）。"
+    )
     # ネットワーク前処理
     PREP_READ = "[QNEAT3Prep] 入力: {features} フィーチャ → {parts} パート（マルチパート分解）"
     PREP_DEGENERATE = (
@@ -263,6 +272,11 @@ class LOG:
 
 class ERR:
     NO_PATH = "始点から終点への経路が見つかりません。グラフの接続や入力点を確認してください。"
+    SAME_TIE_VERTEX = (
+        "始点と終点が同じネットワーク頂点に結線されました（経路は不要です）。"
+        "別の地点のつもりなら座標の CRS を確認してください: "
+        "レイヤが投影 CRS の場合、経緯度は `経度,緯度 [EPSG:4326]` の形式で指定します。"
+    )
     WRONG_GEOM = "ジオメトリ型が不正です。{given} ですが {expected} が必要です。"
     CRS_MISMATCH = "座標参照系が一致しません: {crs_list}。すべて同じ CRS に揃えてください。"
     TIN_GEOGRAPHIC = (

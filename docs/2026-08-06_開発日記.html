@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+<meta charset="UTF-8">
+<title>2026-08-06 開発日記 - QNEAT3</title>
+<style>
+:root {
+  --gh-canvas: #0d1117; --gh-canvas-subtle: #161b22; --gh-canvas-inset: #010409;
+  --gh-border: #30363d; --gh-border-muted: #21262d; --gh-fg: #e6edf3;
+  --gh-fg-muted: #8b949e; --gh-fg-subtle: #6e7681; --gh-accent: #58a6ff;
+  --gh-accent-emphasis: #1f6feb; --gh-success: #3fb950; --gh-attention: #d29922;
+  --gh-danger: #f85149; --gh-done-bg: rgba(35, 134, 54, 0.15); --gh-code-bg: #161b22;
+}
+* { box-sizing: border-box; }
+body.diary.diary-v2 { margin: 0; padding: 32px 16px 64px; max-width: 1012px; margin-inline: auto; background: var(--gh-canvas); color: var(--gh-fg); font-family: system-ui, -apple-system, "Segoe UI", "Hiragino Kaku Gothic ProN", "Yu Gothic", Meiryo, sans-serif; font-size: 14px; line-height: 1.6; }
+.gh-repo-header { padding-bottom: 24px; margin-bottom: 24px; border-bottom: 1px solid var(--gh-border); }
+.gh-repo-header .eyebrow { font-size: 12px; color: var(--gh-fg-muted); margin: 0 0 8px; }
+.gh-repo-header h1 { margin: 0 0 8px; font-size: 24px; font-weight: 600; color: var(--gh-accent); }
+.gh-repo-header .subtitle { margin: 0 0 16px; color: var(--gh-fg-muted); font-size: 14px; }
+.gh-repo-header .header-labels { display: flex; flex-wrap: wrap; gap: 6px; }
+.gh-label { display: inline-block; padding: 0 10px; font-size: 12px; font-weight: 500; line-height: 22px; border-radius: 2em; border: 1px solid transparent; white-space: nowrap; }
+.gh-label-scope { background: rgba(136, 87, 255, 0.15); color: #a371f7; border-color: rgba(163, 113, 247, 0.4); }
+.gh-label-type { background: rgba(110, 118, 129, 0.2); color: var(--gh-fg-muted); border-color: var(--gh-border); }
+.gh-label-ok { background: rgba(63, 185, 80, 0.15); color: var(--gh-success); border-color: rgba(63, 185, 80, 0.4); }
+.gh-label-warn { background: rgba(210, 153, 34, 0.15); color: var(--gh-attention); border-color: rgba(210, 153, 34, 0.4); }
+.gh-toc { margin-bottom: 24px; border: 1px solid var(--gh-border); border-radius: 6px; overflow: hidden; background: var(--gh-canvas-subtle); }
+.gh-toc-title { margin: 0; padding: 12px 16px; font-size: 14px; font-weight: 600; background: var(--gh-border-muted); border-bottom: 1px solid var(--gh-border); color: var(--gh-fg); }
+.gh-toc table { width: 100%; border-collapse: collapse; font-size: 13px; }
+.gh-toc th { text-align: left; padding: 8px 16px; color: var(--gh-fg-muted); font-weight: 600; font-size: 12px; border-bottom: 1px solid var(--gh-border); background: var(--gh-canvas-subtle); }
+.gh-toc td { padding: 10px 16px; border-bottom: 1px solid var(--gh-border-muted); vertical-align: middle; }
+.gh-toc tr:last-child td { border-bottom: none; }
+.gh-toc td:first-child { font-family: ui-monospace, "JetBrains Mono", Consolas, monospace; color: var(--gh-fg-muted); white-space: nowrap; }
+.gh-entry { margin: 24px 0; padding: 20px; border: 1px solid var(--gh-border); border-radius: 6px; background: var(--gh-canvas-subtle); }
+.gh-entry h2 { margin: 0 0 12px; padding-bottom: 8px; font-size: 20px; font-weight: 600; border-bottom: 1px solid var(--gh-border); color: var(--gh-fg); }
+.gh-entry-meta { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-bottom: 16px; font-size: 12px; color: var(--gh-fg-muted); }
+.gh-entry-meta .commit-hash { font-family: ui-monospace, Consolas, monospace; padding: 2px 6px; background: var(--gh-code-bg); border: 1px solid var(--gh-border); border-radius: 4px; color: var(--gh-accent); }
+.gh-entry-meta .pending { color: var(--gh-attention); font-style: italic; }
+.gh-entry h3 { margin: 20px 0 10px; font-size: 12px; font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--gh-fg-muted); }
+.gh-entry h3:first-of-type { margin-top: 0; }
+.gh-entry p { margin: 8px 0; }
+.gh-entry p.lead { color: var(--gh-fg-muted); font-size: 15px; }
+.gh-table { width: 100%; border-collapse: collapse; font-size: 13px; margin: 12px 0; }
+.gh-table th { text-align: left; padding: 8px 12px; background: var(--gh-border-muted); color: var(--gh-fg-muted); font-weight: 600; font-size: 12px; border-bottom: 1px solid var(--gh-border); }
+.gh-table td { padding: 8px 12px; border-bottom: 1px solid var(--gh-border-muted); vertical-align: top; }
+.gh-table tr:last-child td { border-bottom: none; }
+.flow { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 12px 0; padding: 16px; background: var(--gh-canvas-inset); border: 1px solid var(--gh-border); border-radius: 6px; }
+.flow-box { padding: 8px 14px; background: var(--gh-canvas-subtle); border: 1px solid var(--gh-border); border-radius: 6px; font-size: 13px; font-weight: 500; color: var(--gh-fg); }
+.flow-box.accent { border-color: var(--gh-accent-emphasis); color: var(--gh-accent); }
+.flow-box.done { border-color: var(--gh-success); background: var(--gh-done-bg); color: var(--gh-success); }
+.flow-arrow { color: var(--gh-fg-subtle); font-size: 16px; user-select: none; }
+.diff-list { list-style: none; padding: 0; margin: 12px 0; font-family: ui-monospace, Consolas, monospace; font-size: 12px; border: 1px solid var(--gh-border); border-radius: 6px; overflow: hidden; }
+.diff-list li { padding: 4px 12px; border-bottom: 1px solid var(--gh-border-muted); display: flex; gap: 8px; align-items: baseline; }
+.diff-list li:last-child { border-bottom: none; }
+.diff-mark { width: 16px; font-weight: 700; flex-shrink: 0; }
+.diff-mod { background: rgba(210, 153, 34, 0.06); }
+.diff-mod .diff-mark { color: var(--gh-attention); }
+code { font-family: ui-monospace, Consolas, monospace; font-size: 12px; padding: 2px 6px; background: var(--gh-code-bg); border: 1px solid var(--gh-border); border-radius: 4px; color: var(--gh-fg); }
+strong { font-weight: 600; color: var(--gh-fg); }
+footer.gh-footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid var(--gh-border); font-size: 12px; color: var(--gh-fg-subtle); text-align: center; }
+</style>
+</head>
+<body class="diary diary-v2">
+
+<header class="gh-repo-header">
+  <p class="eyebrow">Development Log / 2026-08-06</p>
+  <h1>QNEAT3</h1>
+  <p class="subtitle">GUI NO_PATH の原因特定（座標 CRS 誤解釈）と UX 修正 — 実機 QGIS 3.40.9 で完走確認</p>
+  <div class="header-labels">
+    <span class="gh-label gh-label-type">incident</span>
+    <span class="gh-label gh-label-scope">tool</span>
+  </div>
+</header>
+
+<section class="gh-toc">
+  <h2 class="gh-toc-title">Timeline</h2>
+  <table>
+    <thead>
+      <tr><th>時刻</th><th>概要</th><th>種別</th><th>Status</th><th>詳細</th></tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td>14:24</td>
+        <td>GUI NO_PATH の原因特定（座標 CRS 誤解釈）と UX 修正、実機完走</td>
+        <td><span class="gh-label gh-label-type">incident</span></td>
+        <td><span class="gh-label gh-label-ok">ok</span></td>
+        <td><a href="#entry-1424">詳細</a></td>
+      </tr>
+    </tbody>
+  </table>
+</section>
+
+<main>
+
+  <section class="gh-entry entry" id="entry-1424">
+    <h2>GUI NO_PATH の原因特定（座標 CRS 誤解釈）と UX 修正、実機完走</h2>
+    <div class="gh-entry-meta">
+      <span class="gh-label gh-label-type">incident</span>
+      <span class="gh-label gh-label-scope">tool</span>
+      <time datetime="2026-08-06T14:24">14:24</time>
+      <span class="commit-hash pending">pending</span>
+    </div>
+
+    <h3>背景</h3>
+    <p class="lead">
+      ローカル QGIS 3.40.9（この端末に新規導入）で最短経路を実行すると NO_PATH。
+      デバッグ計装（7 箇所＋プローブ 2 箇所、NDJSON ログ）で追跡したところ、
+      当初の「方向フィールド自動入力」仮説は交絡変数で、真因は
+      <strong>CRS 接尾辞なしの座標がレイヤ CRS（EPSG:6677、メートル）として解釈される</strong>ことだった。
+    </p>
+
+    <h3>原因</h3>
+    <table class="gh-table">
+      <thead><tr><th>層</th><th>内容</th></tr></thead>
+      <tbody>
+        <tr>
+          <td><strong>真因</strong></td>
+          <td>GUI で <code>138.920116,35.111750</code> と CRS 指定なしで入力 →
+          プロジェクト CRS（EPSG:6677）のメートルとして解釈 → 両点が ~123 km 離れた
+          <strong>同一の誤頂点</strong>に結線（計装ログ: tied_start == tied_end）→ 始点=終点で NO_PATH。
+          成功時との対比で「座標が変換されず度のまま」であることがログで確定</td>
+        </tr>
+        <tr>
+          <td>交絡変数</td>
+          <td>方向フィールド <code>NODE1</code> の自動入力。初回再現で success との差分と誤認したが、
+          プローブで <code>directedAnalysis=false / field_id=-1</code>（常に無視）と判明。
+          教訓: A/B 比較は変数を 1 つだけ変える（自分の再現コマンドが CRS 接尾辞も落としていた）</td>
+        </tr>
+        <tr>
+          <td>関連の既知事項</td>
+          <td>元ネットワークに link_len 無し → 検証が ~2 秒で例外（「10 秒で完了・表示なし」の正体）…… 前処理で作成が正規手順（昨日確定済み）</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <h3>対応（UX 修正）</h3>
+    <div class="flow">
+      <span class="flow-box">度の範囲の座標を検出（投影 CRS レイヤ）</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-box accent">経緯度とみなして自動変換＋明示ログ</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-box accent">同一頂点結線は専用エラー（CRS 案内つき）</span>
+      <span class="flow-arrow">→</span>
+      <span class="flow-box done">接尾辞なしでも 146,542 m で完走</span>
+    </div>
+    <ul>
+      <li><code>_coerce_lonlat_point</code>: 投影 CRS レイヤで |x|≤180, |y|≤90 の点を経緯度とみなして変換（LOG.POINT_ASSUMED_LONLAT で明示。接尾辞での明示指定も従来通り有効）</li>
+      <li><code>ERR.SAME_TIE_VERTEX</code>: 始点=終点の同一頂点結線を汎用 NO_PATH から専用エラー化（CRS 案内つき）</li>
+      <li><code>LOG.TIE_FAR_WARNING</code>: 点がネットワークから 100 km 超の接続で警告</li>
+      <li>方向フィールドのガード: 照合値が空ならフィールド指定を無視（自動入力の罠対策。upstream 由来の潜在問題）</li>
+    </ul>
+
+    <h3>変更ファイル</h3>
+    <ul class="diff-list">
+      <li class="diff-mod"><span class="diff-mark">M</span> algs/ShortestPathBetweenPoints.py（経緯度みなし変換・同一頂点チェック・遠距離警告）</li>
+      <li class="diff-mod"><span class="diff-mark">M</span> Qneat3Framework.py（方向フィールドガード・None 正規化）</li>
+      <li class="diff-mod"><span class="diff-mark">M</span> Qneat3Strings.py（ERR.SAME_TIE_VERTEX / LOG.TIE_FAR_WARNING / LOG.POINT_ASSUMED_LONLAT）</li>
+    </ul>
+
+    <h3>検証</h3>
+    <table class="gh-table">
+      <thead><tr><th>項目</th><th>方法</th><th>結果</th></tr></thead>
+      <tbody>
+        <tr><td>交絡の切り分け</td><td>プローブログで direction_field_id=-1 を確認</td><td>方向フィールド無関係を証明</td></tr>
+        <tr><td>真因の特定</td><td>tied_start == tied_end（-5840,-18498）＋座標未変換を計装ログで確認</td><td>CRS 誤解釈を確定</td></tr>
+        <tr><td>同一頂点エラー</td><td>接尾辞なしで実行</td><td>専用エラー（CRS 案内）が発火</td></tr>
+        <tr><td>みなし変換</td><td>接尾辞なしで実行（CLI + GUI）</td><td>みなしログ + <strong>146,542.351 m</strong> で完走</td></tr>
+        <tr><td>TEST.py</td><td>計装除去後に全チェック</td><td>PASS</td></tr>
+      </tbody>
+    </table>
+
+    <h3>残課題</h3>
+    <ul>
+      <li>OD 行列（ポイントレイヤ入力）はレイヤ CRS 前提のみなし変換なし — 点レイヤは事前にネットワークと同じ CRS に変換する運用を README に明記する</li>
+    </ul>
+  </section>
+
+</main>
+
+<footer class="gh-footer">
+  <p>Cursor Dev Diary · style v2 (GitHub) · 2026-08-06</p>
+</footer>
+</body>
+</html>
