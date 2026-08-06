@@ -24,11 +24,11 @@ from math import ceil
 from numpy import arange, meshgrid, linspace, nditer, zeros
 from osgeo import osr
 
-from qgis.core import QgsProject, QgsPoint, QgsVectorLayer, QgsRasterLayer, QgsFeature, QgsFeatureSink, QgsFeatureRequest,  QgsFields, QgsField, QgsGeometry, QgsPointXY, QgsLineString, QgsProcessingException, QgsDistanceArea, QgsUnitTypes      
+from qgis.core import QgsProject, QgsPoint, QgsVectorLayer, QgsRasterLayer, QgsFeature, QgsFeatureSink, QgsFeatureRequest,  QgsFields, QgsField, QgsGeometry, QgsPointXY, QgsLineString, QgsProcessingException, QgsDistanceArea, QgsUnitTypes, QgsCoordinateTransform      
 from qgis.analysis import QgsVectorLayerDirector, QgsGraphAnalyzer, QgsGraphBuilder, QgsInterpolator, QgsTinInterpolator, QgsGridFileWriter
 from qgis.PyQt.QtCore import QVariant
 
-from QNEAT3.Qneat3Utilities import getFieldIndexFromQgsProcessingFeatureSource, getListOfPoints, getFieldDatatypeFromPythontype
+from QNEAT3.Qneat3Utilities import getFieldIndexFromQgsProcessingFeatureSource, getListOfPoints, getFieldDatatypeFromPythontype, transform_point_list
 from QNEAT3.Qneat3Strings import (
     ERR,
     LOG,
@@ -153,8 +153,29 @@ class Qneat3Network():
         log_msg(self.feedback, LOG.NET_POINTS)
         if isinstance(input_points,(list,)):
             self.list_input_points = input_points #[QgsPointXY]
+            self._points_xform_obj = None
         else:
-            self.list_input_points = getListOfPoints(input_points) #[QgsPointXY]
+            #点レイヤの CRS がネットワークと異なれば決定論的に変換（1.0.25）
+            self.list_input_points, points_transformed = transform_point_list(
+                getListOfPoints(input_points),
+                input_points.sourceCrs(),
+                self.AnalysisCrs,
+            )
+            if points_transformed:
+                self._points_xform_obj = QgsCoordinateTransform(
+                    input_points.sourceCrs(),
+                    self.AnalysisCrs,
+                    QgsProject.instance(),
+                )
+                log_msg(
+                    self.feedback,
+                    LOG.POINTS_REPROJECTED,
+                    src=input_points.sourceCrs().authid(),
+                    dst=self.AnalysisCrs.authid(),
+                    count=len(self.list_input_points),
+                )
+            else:
+                self._points_xform_obj = None
             self.input_points = input_points
     
         #Setup cost-strategy pattern.
@@ -631,6 +652,9 @@ class Qneat3AnalysisPoint():
             self.point_geom = point_geom
         else:
             self.point_geom = feature.geometry().asPoint()
+        #点レイヤが別 CRS の場合、出力用の点座標もネットワーク CRS に揃える
+        if getattr(net, "_points_xform_obj", None) is not None:
+            self.point_geom = net._points_xform_obj.transform(self.point_geom)
         self.network_vertex_id = self.getNearestVertexId(net.network, vertex_geom)
         self.network_vertex = self.getNearestVertex(net.network, vertex_geom)
         self.crs = net.AnalysisCrs

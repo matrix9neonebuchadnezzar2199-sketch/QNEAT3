@@ -52,7 +52,7 @@ from qgis.core import (QgsWkbTypes,
 from qgis.analysis import (QgsVectorLayerDirector)
 
 from QNEAT3.Qneat3Framework import Qneat3Network, Qneat3AnalysisPoint
-from QNEAT3.Qneat3Utilities import getFieldDatatype, iter_point_features, reconstruct_path_geometry
+from QNEAT3.Qneat3Utilities import getFieldDatatype, iter_point_features, reconstruct_path_geometry, log_far_tie_summary, reproject_rows_to_crs
 
 from QNEAT3.Qneat3Strings import UIS, LOG, ja, NEO_PREFIX, log_msg, log_od_run_footer
 from QNEAT3.Qneat3HelpJa import help_od_matrix_points_lines
@@ -168,7 +168,11 @@ class OdMatrixFromPointsAsLines(QgisAlgorithm):
         
         analysisCrs = network.sourceCrs()
         
-        point_rows = list(iter_point_features(points))
+        # マージして渡すため Framework の変換が効かない。レイヤの CRS から変換
+        point_rows = reproject_rows_to_crs(
+            list(iter_point_features(points)),
+            points.sourceCrs(), analysisCrs, feedback,
+        )
         merged_coords = [pt for _, pt in point_rows]
 
         log_msg(feedback, LOG.ALG_BUILD_GRAPH)
@@ -200,7 +204,8 @@ class OdMatrixFromPointsAsLines(QgisAlgorithm):
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context,
                                                fields, QgsWkbTypes.LineString, network.sourceCrs())
 
-        
+        log_far_tie_summary(list_analysis_points, feedback)
+
         total_workload = float(pow(len(list_analysis_points),2))
         log_msg(feedback, LOG.OD_WORKLOAD, n=int(total_workload))
         
@@ -223,6 +228,21 @@ class OdMatrixFromPointsAsLines(QgisAlgorithm):
                     feat['exit_cost'] = 0.0
                     feat['total_cost'] = 0.0
                     feat.setGeometry(QgsGeometry())
+                    sink.addFeature(feat, QgsFeatureSink.FastInsert)
+                elif query_point.network_vertex_id == start_point.network_vertex_id:
+                    # 別点が同一頂点に結線: 到達不能ではなく graph コスト 0 + entry/exit
+                    pairs_ok += 1
+                    feat['origin_id'] = start_point.point_id
+                    feat['destination_id'] = query_point.point_id
+                    feat['entry_cost'] = start_point.entry_cost
+                    feat['network_cost'] = 0.0
+                    feat['exit_cost'] = query_point.entry_cost
+                    feat['total_cost'] = start_point.entry_cost + query_point.entry_cost
+                    feat.setGeometry(
+                        QgsGeometry.fromPolylineXY(
+                            [start_point.point_geom, query_point.point_geom]
+                        )
+                    )
                     sink.addFeature(feat, QgsFeatureSink.FastInsert)
                 elif dijkstra_query[0][query_point.network_vertex_id] == -1:
                     feat['origin_id'] = start_point.point_id

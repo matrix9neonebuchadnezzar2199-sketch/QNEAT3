@@ -51,7 +51,7 @@ from qgis.core import (QgsWkbTypes,
 from qgis.analysis import (QgsVectorLayerDirector)
 
 from QNEAT3.Qneat3Framework import Qneat3Network, Qneat3AnalysisPoint
-from QNEAT3.Qneat3Utilities import getFeaturesFromQgsIterable, getFieldDatatype, getListOfPoints
+from QNEAT3.Qneat3Utilities import getFeaturesFromQgsIterable, getFieldDatatype, getListOfPoints, iter_point_features, log_far_tie_summary, reproject_rows_to_crs
 
 from QNEAT3.Qneat3Strings import UIS, LOG, ja, NEO_PREFIX, log_msg, log_od_run_footer
 from QNEAT3.Qneat3HelpJa import help_od_matrix_layers_table
@@ -170,21 +170,27 @@ class OdMatrixFromLayersAsTable(QgisAlgorithm):
         link_length_field = self.parameterAsString(parameters, self.LINK_LENGTH_FIELD, context)
         
         analysisCrs = network.sourceCrs()
-        
-        #Points of both layers have to be merged into one layer --> then tied to the Qneat3Network
-        #get point list of from layer
-        from_coord_list = getListOfPoints(from_points)
-        from_coord_list_length = len(from_coord_list)
-        to_coord_list = getListOfPoints(to_points)
 
-        merged_coords = from_coord_list + to_coord_list
-        
+        #2 レイヤをマージするため Framework では変換できない。レイヤごとにネットワーク CRS へ変換
+        from_rows = reproject_rows_to_crs(
+            list(iter_point_features(from_points)),
+            from_points.sourceCrs(), analysisCrs, feedback,
+        )
+        to_rows = reproject_rows_to_crs(
+            list(iter_point_features(to_points)),
+            to_points.sourceCrs(), analysisCrs, feedback,
+        )
+        from_coord_list_length = len(from_rows)
+        merged_coords = [pt for _, pt in from_rows + to_rows]
+
         log_msg(feedback, LOG.ALG_BUILD_GRAPH)
         net = Qneat3Network(network, merged_coords, strategy, directionFieldName, forwardValue, backwardValue, bothValue, defaultDirection, analysisCrs, speedFieldName, defaultSpeed, tolerance, link_length_field, feedback)
-        
+
         #read the merged point-list seperately for the two layers --> index at the first element of the second layer begins at len(firstLayer) and gets added the index of the current point of layer b.
-        list_from_apoints = [Qneat3AnalysisPoint("from", feature, from_id_field, net, net.list_tiedPoints[i], entry_cost_calc_method, feedback) for i, feature in enumerate(getFeaturesFromQgsIterable(from_points))]
-        list_to_apoints = [Qneat3AnalysisPoint("to", feature, to_id_field, net, net.list_tiedPoints[from_coord_list_length+i], entry_cost_calc_method, feedback) for i, feature in enumerate(getFeaturesFromQgsIterable(to_points))]
+        list_from_apoints = [Qneat3AnalysisPoint("from", feature, from_id_field, net, net.list_tiedPoints[i], entry_cost_calc_method, feedback, point_geom=pt) for i, (feature, pt) in enumerate(from_rows)]
+        list_to_apoints = [Qneat3AnalysisPoint("to", feature, to_id_field, net, net.list_tiedPoints[from_coord_list_length+i], entry_cost_calc_method, feedback, point_geom=pt) for i, (feature, pt) in enumerate(to_rows)]
+
+        log_far_tie_summary(list_from_apoints + list_to_apoints, feedback)
         
         feat = QgsFeature()
         fields = QgsFields()
@@ -215,7 +221,17 @@ class OdMatrixFromLayersAsTable(QgisAlgorithm):
             for query_point in list_to_apoints:
                 if (current_workstep_number%1000)==0:
                     log_msg(feedback, LOG.OD_PROGRESS, n=current_workstep_number)
-                if dijkstra_query[0][query_point.network_vertex_id] == -1:
+                if query_point.network_vertex_id == start_point.network_vertex_id:
+                    # 別点が同一頂点に結線: 到達不能ではなく graph コスト 0 + entry/exit
+                    pairs_ok += 1
+                    feat['origin_id'] = start_point.point_id
+                    feat['destination_id'] = query_point.point_id
+                    feat['entry_cost'] = start_point.entry_cost
+                    feat['network_cost'] = 0.0
+                    feat['exit_cost'] = query_point.entry_cost
+                    feat['total_cost'] = start_point.entry_cost + query_point.entry_cost
+                    sink.addFeature(feat, QgsFeatureSink.FastInsert)
+                elif dijkstra_query[0][query_point.network_vertex_id] == -1:
                     feat['origin_id'] = start_point.point_id
                     feat['destination_id'] = query_point.point_id
                     feat['entry_cost'] = None

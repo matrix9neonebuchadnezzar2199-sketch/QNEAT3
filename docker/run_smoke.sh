@@ -3,6 +3,7 @@
 # 1) Provider 登録確認 2) ネットワーク前処理 3) 出力検証
 # 4) 最短経路（距離） 5) 最短経路（時間・速度フィールド） 6) OD 行列（ライン）
 # 7) セグメント按分（距離） 8) セグメント按分（時間）
+# 9) OD・点レイヤ CRS 変換（WGS84 レイヤ） 10) OD・同一頂点ペア
 set -euo pipefail
 export QT_QPA_PLATFORM=offscreen
 
@@ -93,7 +94,7 @@ qgis_process run qneat3:shortestpathpointtopoint \
   --OUTPUT="$OUT/route2.geojson"
 python3 "$CHECKS/check_route.py" "$OUT/route2.geojson" 5000
 
-echo "== [8/8] segment proration (time, same link @50km/h) =="
+echo "== [8/10] segment proration (time, same link @50km/h) =="
 # 5000 m / (50 km/h) = 360 s（修正前は 720 s）
 qgis_process run qneat3:shortestpathpointtopoint \
   --INPUT="$TESTDATA/network2.geojson" \
@@ -108,5 +109,27 @@ qgis_process run qneat3:shortestpathpointtopoint \
   --LINK_LENGTH_FIELD=link_len \
   --OUTPUT="$OUT/route2_time.geojson"
 python3 "$CHECKS/check_route.py" "$OUT/route2_time.geojson" 360
+
+echo "== [9/10] OD with WGS84 point layer (CRS reprojection) =="
+# 点レイヤは WGS84。A=3857(500,1000) 相当、B=3857(0,0) 相当。
+# 変換が効けば A<->B = 2800（未修正なら同一頂点に潰れて ~0 になる）
+qgis_process run qneat3:OdMatrixFromPointsAsLines \
+  --INPUT="$OUT/prepared.geojson" \
+  --POINTS="$TESTDATA/points_wgs84.geojson" \
+  --ID_FIELD=pid \
+  --STRATEGY=0 \
+  --MATRIX_GEOMETRY_TYPE=1 \
+  --ENTRY_COST_CALCULATION_METHOD=0 \
+  --DEFAULT_DIRECTION=2 \
+  --DEFAULT_SPEED=5 \
+  --TOLERANCE=0 \
+  --LINK_LENGTH_FIELD=link_len \
+  --OUTPUT="$OUT/od_wgs84.geojson"
+python3 "$CHECKS/check_od2.py" "$OUT/od_wgs84.geojson" A B 2800 2800
+
+echo "== [10/10] OD same-vertex pair (distinct points, same tie vertex) =="
+# C=3857(499,1000) 相当 → A と同じ頂点 (500,1000) に結線。
+# 到達不能(NULL)ではなく network_cost=0 / total=entry(≈1.0) になること
+python3 "$CHECKS/check_od2.py" "$OUT/od_wgs84.geojson" A C 0 1.0
 
 echo "SMOKE PASS"

@@ -280,7 +280,7 @@ nav.toc li { margin: 0.35rem 0; }
     </tr>
     <tr>
       <td>OD 行列のポイントレイヤ</td>
-      <td><strong>みなし変換はありません</strong>。点レイヤは事前にネットワークと同じ CRS に変換しておいてください</td>
+      <td>レイヤの CRS からネットワーク CRS へ<strong>自動変換されます（1.0.25、ログに明示）</strong>。同一頂点に結線した別点ペアは「到達不能」ではなく <code>network_cost=0 + entry/exit</code> になります</td>
     </tr>
   </tbody>
 </table>

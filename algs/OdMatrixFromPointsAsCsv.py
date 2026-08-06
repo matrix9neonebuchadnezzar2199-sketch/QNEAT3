@@ -46,7 +46,7 @@ from qgis.core import (QgsProcessing,
 from qgis.analysis import (QgsVectorLayerDirector)
 
 from QNEAT3.Qneat3Framework import Qneat3Network, Qneat3AnalysisPoint
-from QNEAT3.Qneat3Utilities import getFeaturesFromQgsIterable
+from QNEAT3.Qneat3Utilities import getFeaturesFromQgsIterable, log_far_tie_summary
 
 from QNEAT3.Qneat3Strings import UIS, LOG, ja, NEO_PREFIX, log_msg, log_od_run_footer
 from QNEAT3.Qneat3HelpJa import help_od_matrix_points_csv
@@ -155,7 +155,9 @@ class OdMatrixFromPointsAsCsv(QgisAlgorithm):
         net = Qneat3Network(network, points, strategy, directionFieldName, forwardValue, backwardValue, bothValue, defaultDirection, analysisCrs, speedFieldName, defaultSpeed, tolerance, link_length_field, feedback)
         
         list_analysis_points = [Qneat3AnalysisPoint("point", feature, id_field, net, net.list_tiedPoints[i], entry_cost_calc_method, feedback) for i, feature in enumerate(getFeaturesFromQgsIterable(net.input_points))]
-        
+
+        log_far_tie_summary(list_analysis_points, feedback)
+
         total_workload = float(pow(len(list_analysis_points),2))
         log_msg(feedback, LOG.OD_WORKLOAD, n=int(total_workload))
         
@@ -178,6 +180,10 @@ class OdMatrixFromPointsAsCsv(QgisAlgorithm):
                     if query_point.point_id == start_point.point_id:
                         pairs_ok += 1
                         csv_writer.writerow([start_point.point_id, query_point.point_id, float(0), float(0), float(0), float(0)])
+                    elif query_point.network_vertex_id == start_point.network_vertex_id:
+                        # 別点が同一頂点に結線: 到達不能ではなく graph コスト 0 + entry/exit
+                        pairs_ok += 1
+                        csv_writer.writerow([start_point.point_id, query_point.point_id, start_point.entry_cost, float(0), query_point.entry_cost, start_point.entry_cost + query_point.entry_cost])
                     elif dijkstra_query[0][query_point.network_vertex_id] == -1:
                         csv_writer.writerow([start_point.point_id, query_point.point_id, None, None, None, None])
                     else:

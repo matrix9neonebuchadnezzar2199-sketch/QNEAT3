@@ -222,6 +222,8 @@ def _install_qgis_stubs():
         "QgsRasterLayer",
         "QgsFeatureSink",
         "QgsProcessing",
+        "QgsCoordinateTransform",
+        "QgsCoordinateReferenceSystem",
     )
     core = _make_module(core_names)
     core.QgsProcessingException = _FakeProcessingException

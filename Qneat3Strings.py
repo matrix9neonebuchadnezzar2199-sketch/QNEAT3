@@ -185,6 +185,13 @@ class LOG:
         "経緯度 (EPSG:4326) とみなしてレイヤ CRS に変換しました"
         "（明示するには `経度,緯度 [EPSG:4326]` と入力してください）。"
     )
+    POINTS_REPROJECTED = (
+        "[QNEAT3Network] 点レイヤの CRS ({src}) をネットワーク CRS ({dst}) に変換しました（{count} 点）。"
+    )
+    TIE_FAR_SUMMARY = (
+        "[QNEAT3] 警告: ネットワークから 100 km 以上離れて結線した点が {count} / {total} 件"
+        "あります（最大 {dist:,.0f}）。点レイヤの CRS を確認してください。"
+    )
     # ネットワーク前処理
     PREP_READ = "[QNEAT3Prep] 入力: {features} フィーチャ → {parts} パート（マルチパート分解）"
     PREP_DEGENERATE = (

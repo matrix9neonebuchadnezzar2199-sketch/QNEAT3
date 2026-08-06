@@ -92,6 +92,13 @@ footer.gh-footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid va
         <td><span class="gh-label gh-label-ok">ok</span></td>
         <td><a href="#entry-1430">詳細</a></td>
       </tr>
+      <tr>
+        <td>15:50</td>
+        <td>OD 行列 5 本の CRS 変換・同一頂点ペア修正と 1.0.25 リリース</td>
+        <td><span class="gh-label gh-label-type">dev</span></td>
+        <td><span class="gh-label gh-label-ok">ok</span></td>
+        <td><a href="#entry-1550">詳細</a></td>
+      </tr>
     </tbody>
   </table>
 </section>
@@ -179,6 +186,56 @@ footer.gh-footer { margin-top: 40px; padding-top: 16px; border-top: 1px solid va
     <ul>
       <li>OD 行列（ポイントレイヤ入力）はレイヤ CRS 前提のみなし変換なし — 点レイヤは事前にネットワークと同じ CRS に変換する運用を README に明記する</li>
     </ul>
+  </section>
+
+  <section class="gh-entry entry" id="entry-1550">
+    <h2>OD 行列 5 本の CRS 変換・同一頂点ペア修正と 1.0.25 リリース</h2>
+    <div class="gh-entry-meta">
+      <span class="gh-label gh-label-type">dev</span>
+      <span class="gh-label gh-label-scope">tool</span>
+      <time datetime="2026-08-06T15:50">15:50</time>
+      <span class="commit-hash pending">pending</span>
+    </div>
+
+    <h3>概要</h3>
+    <p class="lead">
+      最短経路で確立したノウハウ（座標 CRS・同一頂点・遠距離警告）を OD 行列全 5 本に展開。
+      評価で 3 欠陥（点レイヤ CRS 無変換・同一頂点ペアの NULL 扱い・警告なし）を特定し修正。
+      途中で「リスト渡しだと Framework の変換が効かない」構造差も検出し、
+      変換経路を <code>reproject_rows_to_crs</code> ヘルパーに統一した。
+    </p>
+
+    <h3>変更ファイル</h3>
+    <ul class="diff-list">
+      <li class="diff-mod"><span class="diff-mark">M</span> Qneat3Utilities.py（transform_point_list / reproject_rows_to_crs / log_far_tie_summary）</li>
+      <li class="diff-mod"><span class="diff-mark">M</span> Qneat3Framework.py（レイヤ渡し経路の結線変換＋AnalysisPoint の出力座標変換）</li>
+      <li class="diff-mod"><span class="diff-mark">M</span> Qneat3Strings.py（LOG.POINTS_REPROJECTED / LOG.TIE_FAR_SUMMARY）</li>
+      <li class="diff-mod"><span class="diff-mark">M</span> algs/OdMatrix*.py（5 本: CRS 変換の配線＋同一頂点ペア分岐＋遠距離集計警告）</li>
+      <li class="diff-mod"><span class="diff-mark">M</span> scripts/test_quality.py（スタブに QgsCoordinateTransform 追加）</li>
+      <li class="diff-mod"><span class="diff-mark">M</span> docker/（points_wgs84.geojson・check_od2.py・スモーク 10 ステップ化）</li>
+      <li class="diff-mod"><span class="diff-mark">M</span> metadata.txt（1.0.25）/ Qneat3BuildInfo.py / README.html</li>
+    </ul>
+
+    <h3>設計判断</h3>
+    <table class="gh-table">
+      <thead><tr><th>判断</th><th>採用</th><th>理由</th></tr></thead>
+      <tbody>
+        <tr><td>点レイヤの変換方式</td><td>レイヤの CRS からの決定論的変換（「みなし」不使用）</td><td>レイヤは CRS を持つため推測不要。ログは POINTS_REPROJECTED で明示</td></tr>
+        <tr><td>変換の置き場所</td><td>レイヤ渡しは Framework、マージして渡す系は各アルゴリズム</td><td>FromLayers/FromPointsAsLines は 2 レイヤ（またはリスト）で渡すため Framework ではレイヤ特定不可。reproject_rows_to_crs に統一</td></tr>
+        <tr><td>同一頂点ペア</td><td>NULL（到達不能）→ network_cost=0 + entry/exit</td><td>別の点が同じ道路端点に吸着するのは正常ケース。dijkstra tree=-1 は「未接続」と「同一頂点」を区別しないため頂点 id で先に分岐</td></tr>
+      </tbody>
+    </table>
+
+    <h3>検証</h3>
+    <table class="gh-table">
+      <thead><tr><th>項目</th><th>方法</th><th>結果</th></tr></thead>
+      <tbody>
+        <tr><td>OD・WGS84 点レイヤ</td><td>コンテナスモーク 9</td><td>A→B = 2799.99 ≈ 2800（変換なしでは度のまま潰れることを出力座標で確認済み）</td></tr>
+        <tr><td>OD・同一頂点ペア</td><td>コンテナスモーク 10</td><td>A→C = network_cost 0 / total 1.00（NULL から正常コストへ）</td></tr>
+        <tr><td>品質ゲート</td><td>TEST.py（スタブ追加含む）</td><td>全 PASS</td></tr>
+        <tr><td>スモーク全体</td><td>10 ステップ</td><td>SMOKE PASS</td></tr>
+      </tbody>
+    </table>
   </section>
 
   <section class="gh-entry entry" id="entry-1430">

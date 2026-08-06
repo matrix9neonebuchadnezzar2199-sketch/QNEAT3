@@ -58,7 +58,9 @@ from QNEAT3.Qneat3Framework import Qneat3Network, Qneat3AnalysisPoint
 from QNEAT3.Qneat3Utilities import (
     getFieldDatatype,
     iter_point_features,
+    log_far_tie_summary,
     reconstruct_path_geometry,
+    reproject_rows_to_crs,
 )
 
 from QNEAT3.Qneat3Strings import UIS, LOG, ja, NEO_PREFIX, log_msg, log_od_run_footer
@@ -192,8 +194,15 @@ class OdMatrixFromLayersAsLines(QgisAlgorithm):
         analysisCrs = network.sourceCrs()
         
         # 結線インデックス: iter_point_features と makeGraph の順序を一致させる（マルチポイント対応）
-        from_rows = list(iter_point_features(from_points))
-        to_rows = list(iter_point_features(to_points))
+        # 2 レイヤをマージするため Framework では変換できない。レイヤごとにネットワーク CRS へ変換
+        from_rows = reproject_rows_to_crs(
+            list(iter_point_features(from_points)),
+            from_points.sourceCrs(), analysisCrs, feedback,
+        )
+        to_rows = reproject_rows_to_crs(
+            list(iter_point_features(to_points)),
+            to_points.sourceCrs(), analysisCrs, feedback,
+        )
         from_coord_list_length = len(from_rows)
         merged_coords = [pt for _, pt in from_rows + to_rows]
 
@@ -230,7 +239,8 @@ class OdMatrixFromLayersAsLines(QgisAlgorithm):
         
         (sink, dest_id) = self.parameterAsSink(parameters, self.OUTPUT, context, fields, QgsWkbTypes.LineString, network.sourceCrs())
 
-        
+        log_far_tie_summary(list_from_apoints + list_to_apoints, feedback)
+
         total_workload = float(len(from_rows) * len(to_rows))
         log_msg(feedback, LOG.OD_WORKLOAD, n=int(total_workload))
         
@@ -244,7 +254,24 @@ class OdMatrixFromLayersAsLines(QgisAlgorithm):
             for query_point in list_to_apoints:
                 if (current_workstep_number%1000)==0:
                     log_msg(feedback, LOG.OD_PROGRESS, n=current_workstep_number)
-                if dijkstra_query[0][query_point.network_vertex_id] == -1:
+                if query_point.network_vertex_id == start_point.network_vertex_id:
+                    # 別点が同一頂点に結線: 到達不能ではなく graph コスト 0 + entry/exit
+                    pairs_ok += 1
+                    entry_cost = start_point.entry_cost
+                    exit_cost = query_point.entry_cost
+                    feat['origin_id'] = start_point.point_id
+                    feat['destination_id'] = query_point.point_id
+                    feat['entry_cost'] = entry_cost
+                    feat['network_cost'] = 0.0
+                    feat['exit_cost'] = exit_cost
+                    feat['total_cost'] = entry_cost + exit_cost
+                    feat.setGeometry(
+                        QgsGeometry.fromPolylineXY(
+                            [start_point.point_geom, query_point.point_geom]
+                        )
+                    )
+                    sink.addFeature(feat, QgsFeatureSink.FastInsert)
+                elif dijkstra_query[0][query_point.network_vertex_id] == -1:
                     feat['origin_id'] = start_point.point_id
                     feat['destination_id'] = query_point.point_id
                     feat['entry_cost'] = None

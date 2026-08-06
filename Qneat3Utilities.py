@@ -17,7 +17,7 @@
 ***************************************************************************
 """
 
-from qgis.core import QgsWkbTypes, QgsMessageLog, QgsVectorLayer, QgsFeature, QgsGeometry, QgsFields, QgsField, QgsFeatureRequest, QgsPointXY
+from qgis.core import QgsWkbTypes, QgsMessageLog, QgsVectorLayer, QgsFeature, QgsGeometry, QgsFields, QgsField, QgsFeatureRequest, QgsPointXY, QgsProject, QgsCoordinateTransform
 
 from qgis.PyQt.QtCore import QVariant
 from QNEAT3.Qneat3Exceptions import Qneat3GeometryException
@@ -108,6 +108,70 @@ def iter_point_features(qgs_feature_storage):
 def getListOfPoints(qgs_feature_storage):
     """ポイント / マルチポイントレイヤから QgsPointXY のリストを取得。"""
     return [pt for _, pt in iter_point_features(qgs_feature_storage)]
+
+
+def transform_point_list(points, source_crs, target_crs):
+    """
+    座標リストを source_crs → target_crs に変換する。
+
+    点レイヤはレイヤ自身が CRS を持つため、ネットワーク CRS と異なる場合は
+    決定論的に変換できる（ヒューリスティックな「みなし」は不要）。
+    CRS が同じ・無効な場合はそのまま返す。
+
+    Returns:
+        tuple: (変換後の点リスト, 変換したかどうかの真偽)
+    """
+    if (
+        source_crs is None
+        or not source_crs.isValid()
+        or not target_crs.isValid()
+        or source_crs == target_crs
+    ):
+        return list(points), False
+    xform = QgsCoordinateTransform(source_crs, target_crs, QgsProject.instance())
+    return [xform.transform(pt) for pt in points], True
+
+
+def reproject_rows_to_crs(rows, source_crs, target_crs, feedback):
+    """
+    (feature, pt) 行の座標を source_crs → target_crs に変換する。
+
+    アルゴリズム側でレイヤをマージして渡す場合（FromLayers 系・FromPointsAsLines）
+    は Framework の変換が効かないため、このヘルパーでレイヤごとに変換する。
+    変換した場合は POINTS_REPROJECTED を 1 行ログ出力する。
+    """
+    pts, transformed = transform_point_list(
+        [pt for _, pt in rows], source_crs, target_crs
+    )
+    if transformed:
+        from QNEAT3.Qneat3Strings import LOG, log_msg
+
+        log_msg(
+            feedback, LOG.POINTS_REPROJECTED,
+            src=source_crs.authid(), dst=target_crs.authid(), count=len(pts),
+        )
+    return [(feat, pt) for (feat, _), pt in zip(rows, pts)]
+
+
+def log_far_tie_summary(analysis_points, feedback, threshold=100000.0):
+    """
+    ネットワークから threshold（投影 CRS のメートル想定）以上離れて結線した
+    点の件数を 1 行で警告する。CRS 混在による全点誤結線の検出用。
+    """
+    from QNEAT3.Qneat3Strings import LOG, log_msg
+
+    far_count = 0
+    far_max = 0.0
+    for analysis_point in analysis_points:
+        tie_dist = analysis_point.calcEntryLinestring().length()
+        if tie_dist > threshold:
+            far_count += 1
+            far_max = max(far_max, tie_dist)
+    if far_count:
+        log_msg(
+            feedback, LOG.TIE_FAR_SUMMARY,
+            count=far_count, total=len(analysis_points), dist=far_max,
+        )
 
 
 def predecessor_vertex_on_tree(network, edge_id, at_vertex):
